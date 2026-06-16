@@ -24,6 +24,19 @@ export default function Calendar() {
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth();
 
+  const recordsByDate = useMemo((): Map<string, GiftRecord[]> => {
+    const map = new Map<string, GiftRecord[]>();
+    for (const record of records) {
+      const list = map.get(record.date);
+      if (list) {
+        list.push(record);
+      } else {
+        map.set(record.date, [record]);
+      }
+    }
+    return map;
+  }, [records]);
+
   const daysInMonth = useMemo(() => {
     return new Date(currentYear, currentMonth + 1, 0).getDate();
   }, [currentYear, currentMonth]);
@@ -46,7 +59,7 @@ export default function Calendar() {
         day,
         isCurrentMonth: false,
         isToday: dateStr === todayStr,
-        records: records.filter(r => r.date === dateStr),
+        records: recordsByDate.get(dateStr) || [],
       });
     }
 
@@ -57,7 +70,7 @@ export default function Calendar() {
         day,
         isCurrentMonth: true,
         isToday: dateStr === todayStr,
-        records: records.filter(r => r.date === dateStr),
+        records: recordsByDate.get(dateStr) || [],
       });
     }
 
@@ -72,12 +85,12 @@ export default function Calendar() {
         day,
         isCurrentMonth: false,
         isToday: dateStr === todayStr,
-        records: records.filter(r => r.date === dateStr),
+        records: recordsByDate.get(dateStr) || [],
       });
     }
 
     return days;
-  }, [currentYear, currentMonth, daysInMonth, firstDayOfMonth, records, todayStr]);
+  }, [currentYear, currentMonth, daysInMonth, firstDayOfMonth, recordsByDate, todayStr]);
 
   const monthStats = useMemo(() => {
     const monthRecords = records.filter(r => {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useGiftStore } from '@/store/useGiftStore';
 import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, type EventType, type Direction } from '@/types';
 import { getTodayStr, formatDate } from '@/utils/date';
@@ -9,7 +9,9 @@ import { ArrowLeft, Save, Lightbulb, Gift, AlertCircle } from 'lucide-react';
 export default function RecordForm() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const isEdit = !!id;
+  const dateFromUrl = searchParams.get('date');
   
   const addRecord = useGiftStore(state => state.addRecord);
   const updateRecord = useGiftStore(state => state.updateRecord);
@@ -23,7 +25,7 @@ export default function RecordForm() {
   const [eventName, setEventName] = useState('');
   const [amount, setAmount] = useState('');
   const [direction, setDirection] = useState<Direction>('expense');
-  const [date, setDate] = useState(getTodayStr());
+  const [date, setDate] = useState(dateFromUrl || getTodayStr());
   const [note, setNote] = useState('');
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [showBudgetWarning, setShowBudgetWarning] = useState(false);
@@ -59,8 +61,10 @@ export default function RecordForm() {
       } else {
         navigate('/records');
       }
+    } else if (dateFromUrl) {
+      setDate(dateFromUrl);
     }
-  }, [isEdit, id, getRecordById, navigate]);
+  }, [isEdit, id, dateFromUrl, getRecordById, navigate]);
   
   useEffect(() => {
     if (suggestion?.hasHistory && direction === 'expense') {
