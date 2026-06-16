@@ -21,6 +21,17 @@ import {
 } from '@/services/statistics';
 import { mockRecords } from '@/data/mockData';
 
+function loadInitialRecords(): GiftRecord[] {
+  const records = getRecords();
+  if (records.length === 0) {
+    importRecords(mockRecords);
+    return getRecords();
+  }
+  return records;
+}
+
+const initialRecords = loadInitialRecords();
+
 interface GiftStore {
   records: GiftRecord[];
   isInitialized: boolean;
@@ -53,21 +64,15 @@ interface GiftStore {
 }
 
 export const useGiftStore = create<GiftStore>((set, get) => ({
-  records: [],
-  isInitialized: false,
+  records: initialRecords,
+  isInitialized: true,
   
   initialize: () => {
     const { isInitialized } = get();
     if (isInitialized) return;
     
-    const records = getRecords();
-    
-    if (records.length === 0) {
-      importRecords(mockRecords);
-      set({ records: getRecords(), isInitialized: true });
-    } else {
-      set({ records, isInitialized: true });
-    }
+    const records = loadInitialRecords();
+    set({ records, isInitialized: true });
   },
   
   loadMockData: () => {
