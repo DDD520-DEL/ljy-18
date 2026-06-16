@@ -1,9 +1,11 @@
-import type { GiftRecord, YearlyBudget } from '@/types';
+import type { GiftRecord, YearlyBudget, MergeRecord, MergeResult } from '@/types';
 import { generateId } from '@/utils/id';
 
 const STORAGE_KEY = 'gift_ledger_records';
 const STORAGE_VERSION = '1.0';
 const BUDGET_STORAGE_KEY = 'gift_ledger_budgets';
+const MERGE_HISTORY_KEY = 'gift_ledger_merge_history';
+const MAX_MERGE_HISTORY = 10;
 
 interface StorageData {
   records: GiftRecord[];
@@ -163,4 +165,135 @@ export function importRecords(records: GiftRecord[]): void {
 
 export function clearAllRecords(): void {
   saveStorageData({ records: [], version: STORAGE_VERSION });
+}
+
+function getMergeHistory(): MergeRecord[] {
+  try {
+    const raw = localStorage.getItem(MERGE_HISTORY_KEY);
+    if (raw) {
+      return JSON.parse(raw) as MergeRecord[];
+    }
+  } catch (e) {
+    console.error('读取合并历史失败:', e);
+  }
+  return [];
+}
+
+function saveMergeHistory(history: MergeRecord[]): void {
+  try {
+    localStorage.setItem(MERGE_HISTORY_KEY, JSON.stringify(history));
+  } catch (e) {
+    console.error('保存合并历史失败:', e);
+  }
+}
+
+export function appendMergeHistory(record: MergeRecord): void {
+  const history = getMergeHistory();
+  history.unshift(record);
+  if (history.length > MAX_MERGE_HISTORY) {
+    history.length = MAX_MERGE_HISTORY;
+  }
+  saveMergeHistory(history);
+}
+
+export function popMergeHistory(): MergeRecord | null {
+  const history = getMergeHistory();
+  if (history.length === 0) return null;
+  const latest = history.shift()!;
+  saveMergeHistory(history);
+  return latest;
+}
+
+export function getLatestMergeRecord(): MergeRecord | null {
+  const history = getMergeHistory();
+  return history.length > 0 ? history[0] : null;
+}
+
+export function mergeContacts(
+  sourceContactNames: string[],
+  targetContactName: string
+): MergeResult {
+  if (sourceContactNames.length === 0) {
+    return { success: false, message: '请选择要合并的源联系人', updatedCount: 0 };
+  }
+
+  const allNames = [...sourceContactNames, targetContactName];
+  const uniqueNames = new Set(allNames);
+  if (uniqueNames.size !== allNames.length) {
+    return { success: false, message: '源联系人与目标联系人不能重复', updatedCount: 0 };
+  }
+
+  const data = getStorageData();
+  const modifiedRecords: MergeRecord['modifiedRecords'] = [];
+  let updatedCount = 0;
+
+  data.records = data.records.map(record => {
+    if (sourceContactNames.includes(record.contactName)) {
+      modifiedRecords.push({
+        recordId: record.id,
+        oldContactName: record.contactName,
+        newContactName: targetContactName,
+      });
+      updatedCount++;
+      return {
+        ...record,
+        contactName: targetContactName,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    return record;
+  });
+
+  if (updatedCount === 0) {
+    return { success: false, message: '未找到需要迁移的记录', updatedCount: 0 };
+  }
+
+  saveStorageData(data);
+
+  const mergeRecord: MergeRecord = {
+    id: generateId(),
+    sourceContactNames,
+    targetContactName,
+    modifiedRecords,
+    mergedAt: new Date().toISOString(),
+  };
+
+  appendMergeHistory(mergeRecord);
+
+  return {
+    success: true,
+    mergeRecord,
+    message: `已成功合并 ${sourceContactNames.length} 个联系人到「${targetContactName}」，共迁移 ${updatedCount} 条记录`,
+    updatedCount,
+  };
+}
+
+export function undoLastMerge(): MergeResult {
+  const mergeRecord = popMergeHistory();
+  if (!mergeRecord) {
+    return { success: false, message: '没有可撤销的合并操作', updatedCount: 0 };
+  }
+
+  const data = getStorageData();
+  let restoredCount = 0;
+
+  mergeRecord.modifiedRecords.forEach(({ recordId, oldContactName }) => {
+    const idx = data.records.findIndex(r => r.id === recordId);
+    if (idx !== -1) {
+      data.records[idx] = {
+        ...data.records[idx],
+        contactName: oldContactName,
+        updatedAt: new Date().toISOString(),
+      };
+      restoredCount++;
+    }
+  });
+
+  saveStorageData(data);
+
+  return {
+    success: true,
+    message: `已撤销合并，恢复 ${restoredCount} 条记录到原联系人`,
+    updatedCount: restoredCount,
+  };
 }

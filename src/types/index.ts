@@ -117,3 +117,22 @@ export interface ReturnGiftReminder {
   message: string;
   urgency: 'high' | 'medium' | 'low';
 }
+
+export interface MergeRecord {
+  id: string;
+  sourceContactNames: string[];
+  targetContactName: string;
+  modifiedRecords: Array<{
+    recordId: string;
+    oldContactName: string;
+    newContactName: string;
+  }>;
+  mergedAt: string;
+}
+
+export interface MergeResult {
+  success: boolean;
+  mergeRecord?: MergeRecord;
+  message: string;
+  updatedCount: number;
+}

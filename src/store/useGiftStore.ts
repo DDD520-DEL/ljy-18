@@ -13,6 +13,9 @@ import {
   getAllBudgets as storageGetAllBudgets,
   setYearlyBudget as storageSetYearlyBudget,
   deleteYearlyBudget as storageDeleteYearlyBudget,
+  mergeContacts as storageMergeContacts,
+  undoLastMerge as storageUndoLastMerge,
+  getLatestMergeRecord as storageGetLatestMergeRecord,
 } from '@/services/storage';
 import {
   getContactSummaryList,
@@ -26,7 +29,7 @@ import {
   checkMonthlyBudgetAfterExpense,
   getReturnGiftReminders,
 } from '@/services/statistics';
-import type { ReturnGiftReminder } from '@/types';
+import type { ReturnGiftReminder, MergeResult, MergeRecord } from '@/types';
 import { mockRecords } from '@/data/mockData';
 
 function loadInitialRecords(): GiftRecord[] {
@@ -83,6 +86,10 @@ interface GiftStore {
   };
   
   getReturnGiftReminders: () => ReturnGiftReminder[];
+  
+  mergeContacts: (sourceContactNames: string[], targetContactName: string) => MergeResult;
+  undoLastMerge: () => MergeResult;
+  getLatestMergeRecord: () => MergeRecord | null;
 }
 
 export const useGiftStore = create<GiftStore>((set, get) => ({
@@ -191,5 +198,25 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
   
   getReturnGiftReminders: () => {
     return getReturnGiftReminders();
+  },
+  
+  mergeContacts: (sourceContactNames, targetContactName) => {
+    const result = storageMergeContacts(sourceContactNames, targetContactName);
+    if (result.success) {
+      set({ records: getRecords() });
+    }
+    return result;
+  },
+  
+  undoLastMerge: () => {
+    const result = storageUndoLastMerge();
+    if (result.success) {
+      set({ records: getRecords() });
+    }
+    return result;
+  },
+  
+  getLatestMergeRecord: () => {
+    return storageGetLatestMergeRecord();
   },
 }));
