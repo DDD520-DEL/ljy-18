@@ -258,7 +258,7 @@ function calculateDaysDifference(dateStr: string): number {
 function generateReminderMessage(
   contactName: string,
   type: ReminderType,
-  lastIncomeAmount: number,
+  amount: number,
   daysSince: number,
   daysUntil: number
 ): string {
@@ -268,7 +268,7 @@ function generateReminderMessage(
     case 'upcoming':
       return `距离 ${contactName} 上次随礼满一周年还有 ${daysUntil} 天，建议提前准备回礼。`;
     case 'unbalanced':
-      return `${contactName} 累计随礼 ¥${lastIncomeAmount}，您的回礼金额偏低，建议补回差额。`;
+      return `${contactName} 累计随礼 ¥${amount}，您的回礼金额偏低，建议补回差额。`;
     default:
       return `建议给 ${contactName} 回礼。`;
   }
@@ -296,12 +296,12 @@ export function getReturnGiftReminders(): ReturnGiftReminder[] {
 
     let type: ReminderType | null = null;
 
-    if (contact.totalIncome > 0 && contact.totalExpense < contact.lastIncomeAmount * AMOUNT_TOLERANCE_RATIO) {
-      type = 'unbalanced';
-    } else if (daysSinceLastIncome > RETURN_GIFT_CYCLE_DAYS) {
+    if (daysSinceLastIncome > RETURN_GIFT_CYCLE_DAYS) {
       type = 'overdue';
     } else if (daysUntilDeadline <= REMINDER_ADVANCE_DAYS && daysUntilDeadline >= 0) {
       type = 'upcoming';
+    } else if (contact.totalIncome > 0 && contact.totalExpense < contact.lastIncomeAmount * AMOUNT_TOLERANCE_RATIO) {
+      type = 'unbalanced';
     }
 
     if (type) {
@@ -309,6 +309,8 @@ export function getReturnGiftReminders(): ReturnGiftReminder[] {
       const finalSuggestedAmount = suggestedAmount < contact.lastIncomeAmount 
         ? contact.lastIncomeAmount 
         : suggestedAmount;
+
+      const messageAmount = type === 'unbalanced' ? contact.totalIncome : contact.lastIncomeAmount;
 
       reminders.push({
         contactName: contact.name,
@@ -322,7 +324,7 @@ export function getReturnGiftReminders(): ReturnGiftReminder[] {
         message: generateReminderMessage(
           contact.name,
           type,
-          contact.lastIncomeAmount,
+          messageAmount,
           daysSinceLastIncome,
           daysUntilDeadline
         ),
