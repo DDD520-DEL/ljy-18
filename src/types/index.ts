@@ -102,3 +102,18 @@ export interface BudgetProgress {
   isOverBudget: boolean;
   isMonthOverBudget: boolean;
 }
+
+export type ReminderType = 'overdue' | 'upcoming' | 'unbalanced';
+
+export interface ReturnGiftReminder {
+  contactName: string;
+  type: ReminderType;
+  lastIncomeAmount: number;
+  lastIncomeDate: string;
+  myTotalExpense: number;
+  suggestedAmount: number;
+  daysSinceLastIncome: number;
+  daysUntilDeadline: number;
+  message: string;
+  urgency: 'high' | 'medium' | 'low';
+}

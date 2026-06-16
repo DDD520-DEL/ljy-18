@@ -1,4 +1,4 @@
-import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, EventType, BudgetProgress } from '@/types';
+import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, EventType, BudgetProgress, ReturnGiftReminder, ReminderType } from '@/types';
 import { getRecords, getRecordsByContact, getRecordsByYear, getAvailableYears, getYearlyBudget } from './storage';
 import { formatDate } from '@/utils/date';
 
@@ -242,4 +242,104 @@ export function checkMonthlyBudgetAfterExpense(year: number, month: number, addi
     currentMonthUsed,
     newTotal,
   };
+}
+
+const RETURN_GIFT_CYCLE_DAYS = 365;
+const REMINDER_ADVANCE_DAYS = 30;
+const AMOUNT_TOLERANCE_RATIO = 0.9;
+
+function calculateDaysDifference(dateStr: string): number {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffTime = now.getTime() - date.getTime();
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+}
+
+function generateReminderMessage(
+  contactName: string,
+  type: ReminderType,
+  lastIncomeAmount: number,
+  daysSince: number,
+  daysUntil: number
+): string {
+  switch (type) {
+    case 'overdue':
+      return `${contactName} 上次随礼已过去 ${daysSince} 天，超过合理回礼周期，建议尽快回礼。`;
+    case 'upcoming':
+      return `距离 ${contactName} 上次随礼满一周年还有 ${daysUntil} 天，建议提前准备回礼。`;
+    case 'unbalanced':
+      return `${contactName} 累计随礼 ¥${lastIncomeAmount}，您的回礼金额偏低，建议补回差额。`;
+    default:
+      return `建议给 ${contactName} 回礼。`;
+  }
+}
+
+function determineUrgency(type: ReminderType, daysSince: number, daysUntil: number): 'high' | 'medium' | 'low' {
+  if (type === 'overdue') {
+    return daysSince > RETURN_GIFT_CYCLE_DAYS + 60 ? 'high' : 'medium';
+  }
+  if (type === 'upcoming') {
+    return daysUntil <= 15 ? 'high' : 'medium';
+  }
+  return 'low';
+}
+
+export function getReturnGiftReminders(): ReturnGiftReminder[] {
+  const contactSummaries = getContactSummaryList();
+  const reminders: ReturnGiftReminder[] = [];
+
+  contactSummaries.forEach((contact) => {
+    if (contact.lastIncomeAmount === 0) return;
+
+    const daysSinceLastIncome = calculateDaysDifference(contact.lastIncomeDate);
+    const daysUntilDeadline = RETURN_GIFT_CYCLE_DAYS - daysSinceLastIncome;
+
+    let type: ReminderType | null = null;
+
+    if (contact.totalIncome > 0 && contact.totalExpense < contact.lastIncomeAmount * AMOUNT_TOLERANCE_RATIO) {
+      type = 'unbalanced';
+    } else if (daysSinceLastIncome > RETURN_GIFT_CYCLE_DAYS) {
+      type = 'overdue';
+    } else if (daysUntilDeadline <= REMINDER_ADVANCE_DAYS && daysUntilDeadline >= 0) {
+      type = 'upcoming';
+    }
+
+    if (type) {
+      const suggestedAmount = Math.ceil(contact.lastIncomeAmount / 100) * 100;
+      const finalSuggestedAmount = suggestedAmount < contact.lastIncomeAmount 
+        ? contact.lastIncomeAmount 
+        : suggestedAmount;
+
+      reminders.push({
+        contactName: contact.name,
+        type,
+        lastIncomeAmount: contact.lastIncomeAmount,
+        lastIncomeDate: contact.lastIncomeDate,
+        myTotalExpense: contact.totalExpense,
+        suggestedAmount: finalSuggestedAmount,
+        daysSinceLastIncome,
+        daysUntilDeadline,
+        message: generateReminderMessage(
+          contact.name,
+          type,
+          contact.lastIncomeAmount,
+          daysSinceLastIncome,
+          daysUntilDeadline
+        ),
+        urgency: determineUrgency(type, daysSinceLastIncome, daysUntilDeadline),
+      });
+    }
+  });
+
+  return reminders.sort((a, b) => {
+    const urgencyOrder = { high: 0, medium: 1, low: 2 };
+    const urgencyDiff = urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
+    if (urgencyDiff !== 0) return urgencyDiff;
+    
+    const typeOrder = { overdue: 0, upcoming: 1, unbalanced: 2 };
+    const typeDiff = typeOrder[a.type] - typeOrder[b.type];
+    if (typeDiff !== 0) return typeDiff;
+    
+    return a.daysUntilDeadline - b.daysUntilDeadline;
+  });
 }

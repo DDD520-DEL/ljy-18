@@ -2,8 +2,9 @@ import { useGiftStore } from '@/store/useGiftStore';
 import StatCard from '@/components/StatCard';
 import RecordItem from '@/components/RecordItem';
 import BudgetProgressCard from '@/components/BudgetProgressCard';
+import ReminderCard from '@/components/ReminderCard';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, TrendingDown, Wallet, Users, Plus, ArrowRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Users, Plus, ArrowRight, Bell } from 'lucide-react';
 import { formatMoneyShort } from '@/utils/money';
 
 export default function Home() {
@@ -12,11 +13,13 @@ export default function Home() {
   const getRecentRecords = useGiftStore(state => state.getRecentRecords);
   const getTotalStats = useGiftStore(state => state.getTotalStats);
   const getBudgetProgress = useGiftStore(state => state.getBudgetProgress);
+  const getReturnGiftReminders = useGiftStore(state => state.getReturnGiftReminders);
   
   const yearStats = getCurrentYearStats();
   const recentRecords = getRecentRecords(5);
   const totalStats = getTotalStats();
   const budgetProgress = getBudgetProgress(new Date().getFullYear());
+  const reminders = getReturnGiftReminders();
   
   const currentYear = new Date().getFullYear();
   
@@ -39,6 +42,37 @@ export default function Home() {
           添加记录
         </button>
       </div>
+
+      {reminders.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-ink-800 flex items-center gap-2">
+              <Bell size={20} className="text-primary-500" />
+              回礼提醒
+              <span className="text-xs bg-primary-100 text-primary-600 px-2 py-0.5 rounded-full">
+                {reminders.length} 条
+              </span>
+            </h2>
+          </div>
+          <div className="space-y-3">
+            {reminders.slice(0, 5).map((reminder) => (
+              <ReminderCard
+                key={reminder.contactName}
+                reminder={reminder}
+                onClick={() => navigate(`/contacts/${encodeURIComponent(reminder.contactName)}`)}
+              />
+            ))}
+            {reminders.length > 5 && (
+              <button
+                onClick={() => navigate('/contacts')}
+                className="w-full py-3 text-center text-sm text-primary-500 hover:text-primary-600 font-medium"
+              >
+                查看全部 {reminders.length} 条提醒
+              </button>
+            )}
+          </div>
+        </div>
+      )}
       
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard

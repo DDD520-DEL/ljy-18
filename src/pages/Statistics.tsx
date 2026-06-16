@@ -17,7 +17,6 @@ import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, Calendar, 
 import { formatMoney, formatMoneyWithSign } from '@/utils/money';
 import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, type EventType } from '@/types';
 import { exportStatisticsToExcel, formatExportDate, type ExportProgress } from '@/utils/export';
-import BudgetProgressCard from '@/components/BudgetProgressCard';
 import { useNavigate } from 'react-router-dom';
 
 const CHART_COLORS = {

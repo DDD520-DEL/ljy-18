@@ -24,7 +24,9 @@ import {
   getTotalStats,
   getBudgetProgress,
   checkMonthlyBudgetAfterExpense,
+  getReturnGiftReminders,
 } from '@/services/statistics';
+import type { ReturnGiftReminder } from '@/types';
 import { mockRecords } from '@/data/mockData';
 
 function loadInitialRecords(): GiftRecord[] {
@@ -79,6 +81,8 @@ interface GiftStore {
     currentMonthUsed: number;
     newTotal: number;
   };
+  
+  getReturnGiftReminders: () => ReturnGiftReminder[];
 }
 
 export const useGiftStore = create<GiftStore>((set, get) => ({
@@ -183,5 +187,9 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
   
   checkMonthlyBudgetAfterExpense: (year, month, additionalAmount) => {
     return checkMonthlyBudgetAfterExpense(year, month, additionalAmount);
+  },
+  
+  getReturnGiftReminders: () => {
+    return getReturnGiftReminders();
   },
 }));
