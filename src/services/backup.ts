@@ -237,12 +237,17 @@ export async function decryptBackup(
   return backupFile;
 }
 
-export function importBackup(
+function yieldToMain(): Promise<void> {
+  return new Promise(resolve => requestAnimationFrame(() => resolve()));
+}
+
+export async function importBackup(
   backupFile: BackupFile,
   mode: ImportMode,
   onProgress?: (progress: BackupProgress) => void
-): ImportResult {
+): Promise<ImportResult> {
   onProgress?.({ phase: 'importing', current: 0, total: 100 });
+  await yieldToMain();
   
   const currentRecords = getRecords();
   const currentBudgets = getAllBudgets();
@@ -252,15 +257,31 @@ export function importBackup(
   let budgetsImported = 0;
   
   if (mode === 'overwrite') {
+    onProgress?.({ phase: 'importing', current: 10, total: 100 });
+    await yieldToMain();
+    
     clearAllRecords();
+    
+    onProgress?.({ phase: 'importing', current: 30, total: 100 });
+    await yieldToMain();
+    
     storageImportRecords(backupFile.data.records);
+    
+    onProgress?.({ phase: 'importing', current: 60, total: 100 });
+    await yieldToMain();
+    
     saveBudgetStorageData(backupFile.data.budgets);
+    
+    onProgress?.({ phase: 'importing', current: 80, total: 100 });
+    await yieldToMain();
+    
     saveMergeHistory(backupFile.data.mergeHistory);
     
     recordsImported = backupFile.data.records.length;
     budgetsImported = backupFile.data.budgets.length;
     
     onProgress?.({ phase: 'importing', current: 100, total: 100 });
+    await yieldToMain();
     
     return {
       success: true,
@@ -273,15 +294,31 @@ export function importBackup(
     const existingRecordIds = new Set(currentRecords.map(r => r.id));
     const existingBudgetYears = new Set(currentBudgets.map(b => b.year));
     
+    onProgress?.({ phase: 'importing', current: 10, total: 100 });
+    await yieldToMain();
+    
     const mergedRecords = [...currentRecords];
-    for (const record of backupFile.data.records) {
+    const totalRecords = backupFile.data.records.length;
+    const chunkSize = Math.max(1, Math.ceil(totalRecords / 8));
+    
+    for (let i = 0; i < backupFile.data.records.length; i++) {
+      const record = backupFile.data.records[i];
       if (existingRecordIds.has(record.id)) {
         recordsSkipped++;
       } else {
         mergedRecords.push(record);
         recordsImported++;
       }
+      
+      if (i > 0 && (i % chunkSize === 0 || i === totalRecords - 1)) {
+        const progress = 10 + Math.round((i + 1) / totalRecords * 60);
+        onProgress?.({ phase: 'importing', current: progress, total: 100 });
+        await yieldToMain();
+      }
     }
+    
+    onProgress?.({ phase: 'importing', current: 75, total: 100 });
+    await yieldToMain();
     
     const mergedBudgets = [...currentBudgets];
     for (const budget of backupFile.data.budgets) {
@@ -291,7 +328,14 @@ export function importBackup(
       }
     }
     
+    onProgress?.({ phase: 'importing', current: 85, total: 100 });
+    await yieldToMain();
+    
     storageImportRecords(mergedRecords);
+    
+    onProgress?.({ phase: 'importing', current: 90, total: 100 });
+    await yieldToMain();
+    
     saveBudgetStorageData(mergedBudgets);
     
     const mergedMergeHistory = [
@@ -301,6 +345,7 @@ export function importBackup(
     saveMergeHistory(mergedMergeHistory);
     
     onProgress?.({ phase: 'importing', current: 100, total: 100 });
+    await yieldToMain();
     
     return {
       success: true,

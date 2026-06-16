@@ -147,10 +147,13 @@ export default function Settings() {
         setBackupProgress(progress);
       });
       
+      setBackupProgress(null);
+      setImportResult({ success: true, message: '备份已保存' });
+      
       setTimeout(() => {
         setModalType(null);
         resetModalState();
-      }, 1000);
+      }, 2000);
     } catch (e) {
       setError(e instanceof Error ? e.message : '导出失败');
       setBackupProgress(null);
@@ -180,9 +183,10 @@ export default function Settings() {
       
       const hasLocalData = checkLocalDataExists();
       if (hasLocalData) {
+        setBackupProgress(null);
         setModalType('import-mode');
       } else {
-        setImportMode('overwrite');
+        setBackupProgress(null);
         handleImport('overwrite');
       }
     } catch (e) {
@@ -191,14 +195,17 @@ export default function Settings() {
     }
   };
   
-  const handleImport = (mode: ImportMode) => {
+  const handleImport = async (mode: ImportMode) => {
     if (!decryptedBackup) return;
     
+    setBackupProgress({ phase: 'importing', current: 0, total: 100 });
+    
     try {
-      const result = importBackup(decryptedBackup, mode, (progress) => {
+      const result = await importBackup(decryptedBackup, mode, (progress) => {
         setBackupProgress(progress);
       });
       
+      setBackupProgress(null);
       setImportResult(result);
       refreshRecords();
       setSavedBudgets(getAllBudgets());
@@ -206,7 +213,7 @@ export default function Settings() {
       setTimeout(() => {
         setModalType(null);
         resetModalState();
-      }, 2000);
+      }, 2500);
     } catch (e) {
       setError(e instanceof Error ? e.message : '导入失败');
       setBackupProgress(null);

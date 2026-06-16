@@ -105,7 +105,7 @@ interface GiftStore {
   exportEncryptedBackup: (password: string, onProgress?: (progress: BackupProgress) => void) => Promise<void>;
   readBackupFile: (file: File) => Promise<string>;
   decryptBackup: (encryptedData: string, password: string, onProgress?: (progress: BackupProgress) => void) => Promise<BackupFile>;
-  importBackup: (backupFile: BackupFile, mode: ImportMode, onProgress?: (progress: BackupProgress) => void) => ImportResult;
+  importBackup: (backupFile: BackupFile, mode: ImportMode, onProgress?: (progress: BackupProgress) => void) => Promise<ImportResult>;
   checkLocalDataExists: () => boolean;
 }
 
@@ -249,8 +249,8 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
     return serviceDecryptBackup(encryptedData, password, onProgress);
   },
 
-  importBackup: (backupFile, mode, onProgress) => {
-    const result = serviceImportBackup(backupFile, mode, onProgress);
+  importBackup: async (backupFile, mode, onProgress) => {
+    const result = await serviceImportBackup(backupFile, mode, onProgress);
     if (result.success) {
       set({ records: getRecords() });
     }
