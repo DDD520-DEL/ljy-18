@@ -1,8 +1,9 @@
-import type { GiftRecord } from '@/types';
+import type { GiftRecord, YearlyBudget } from '@/types';
 import { generateId } from '@/utils/id';
 
 const STORAGE_KEY = 'gift_ledger_records';
 const STORAGE_VERSION = '1.0';
+const BUDGET_STORAGE_KEY = 'gift_ledger_budgets';
 
 interface StorageData {
   records: GiftRecord[];
@@ -30,6 +31,59 @@ function saveStorageData(data: StorageData): void {
   } catch (e) {
     console.error('保存本地存储失败:', e);
   }
+}
+
+function getBudgetStorageData(): YearlyBudget[] {
+  try {
+    const raw = localStorage.getItem(BUDGET_STORAGE_KEY);
+    if (raw) {
+      return JSON.parse(raw) as YearlyBudget[];
+    }
+  } catch (e) {
+    console.error('读取预算存储失败:', e);
+  }
+  return [];
+}
+
+function saveBudgetStorageData(budgets: YearlyBudget[]): void {
+  try {
+    localStorage.setItem(BUDGET_STORAGE_KEY, JSON.stringify(budgets));
+  } catch (e) {
+    console.error('保存预算存储失败:', e);
+  }
+}
+
+export function getYearlyBudget(year: number): YearlyBudget | undefined {
+  const budgets = getBudgetStorageData();
+  return budgets.find(b => b.year === year);
+}
+
+export function getAllBudgets(): YearlyBudget[] {
+  return getBudgetStorageData();
+}
+
+export function setYearlyBudget(year: number, budget: number): YearlyBudget {
+  const budgets = getBudgetStorageData();
+  const existingIndex = budgets.findIndex(b => b.year === year);
+  const newBudget: YearlyBudget = { year, budget };
+  
+  if (existingIndex >= 0) {
+    budgets[existingIndex] = newBudget;
+  } else {
+    budgets.push(newBudget);
+  }
+  
+  saveBudgetStorageData(budgets);
+  return newBudget;
+}
+
+export function deleteYearlyBudget(year: number): boolean {
+  const budgets = getBudgetStorageData();
+  const initialLength = budgets.length;
+  const filtered = budgets.filter(b => b.year !== year);
+  if (filtered.length === initialLength) return false;
+  saveBudgetStorageData(filtered);
+  return true;
 }
 
 export function getRecords(): GiftRecord[] {

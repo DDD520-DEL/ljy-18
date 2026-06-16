@@ -13,10 +13,12 @@ import {
   Cell,
   Legend
 } from 'recharts';
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, Calendar, Download, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, Calendar, Download, Loader2, Target, AlertTriangle } from 'lucide-react';
 import { formatMoney, formatMoneyWithSign } from '@/utils/money';
 import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, type EventType } from '@/types';
 import { exportStatisticsToExcel, formatExportDate, type ExportProgress } from '@/utils/export';
+import BudgetProgressCard from '@/components/BudgetProgressCard';
+import { useNavigate } from 'react-router-dom';
 
 const CHART_COLORS = {
   expense: '#C41E3A',
@@ -34,9 +36,11 @@ const TYPE_COLORS: Record<EventType, string> = {
 };
 
 export default function Statistics() {
+  const navigate = useNavigate();
   const records = useGiftStore(state => state.records);
   const getAvailableYears = useGiftStore(state => state.getAvailableYears);
   const getYearlyStats = useGiftStore(state => state.getYearlyStats);
+  const getBudgetProgress = useGiftStore(state => state.getBudgetProgress);
   
   const availableYears = getAvailableYears();
   const currentYear = new Date().getFullYear();
@@ -46,6 +50,7 @@ export default function Statistics() {
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
   
   const stats = getYearlyStats(selectedYear);
+  const budgetProgress = getBudgetProgress(selectedYear);
   
   const yearRecords = useMemo(() => {
     return records.filter(r => {
@@ -187,6 +192,120 @@ export default function Statistics() {
           </p>
         </div>
       </div>
+      
+      {budgetProgress.budget > 0 ? (
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-ink-800 flex items-center gap-2">
+              <Target size={20} className="text-primary-500" />
+              预算使用情况
+            </h3>
+            {budgetProgress.isOverBudget ? (
+              <span className="flex items-center gap-1 text-xs text-red-500 bg-red-50 px-2 py-1 rounded-lg">
+                <AlertTriangle size={14} />
+                已超支 {formatMoney(budgetProgress.used - budgetProgress.budget)}
+              </span>
+            ) : (
+              <button
+                onClick={() => navigate('/settings')}
+                className="text-xs text-primary-500 hover:text-primary-600 font-medium"
+              >
+                调整预算
+              </button>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4 mb-4">
+            <div>
+              <p className="text-xs text-ink-400 mb-1">年度预算</p>
+              <p className="text-xl font-bold text-ink-800 tabular-nums">{formatMoney(budgetProgress.budget)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-ink-400 mb-1">已使用</p>
+              <p className={`text-xl font-bold tabular-nums ${
+                budgetProgress.percentage >= 100 ? 'text-red-500' : 
+                budgetProgress.percentage >= 80 ? 'text-gold-500' : 'text-primary-500'
+              }`}>
+                {formatMoney(budgetProgress.used)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-ink-400 mb-1">剩余额度</p>
+              <p className={`text-xl font-bold tabular-nums ${budgetProgress.remaining > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                {formatMoney(budgetProgress.remaining)}
+              </p>
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            <div>
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span className="text-ink-500">年度进度</span>
+                <span className={`font-medium ${
+                  budgetProgress.percentage >= 100 ? 'text-red-500' : 'text-ink-700'
+                }`}>
+                  {budgetProgress.percentage.toFixed(1)}%
+                </span>
+              </div>
+              <div className="h-3 bg-cream-200 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    budgetProgress.percentage >= 100
+                      ? 'bg-gradient-to-r from-red-400 to-red-500'
+                      : budgetProgress.percentage >= 80
+                      ? 'bg-gradient-to-r from-gold-400 to-gold-500'
+                      : 'bg-gradient-to-r from-primary-400 to-primary-500'
+                  }`}
+                  style={{ width: `${Math.min(budgetProgress.percentage, 100)}%` }}
+                />
+              </div>
+            </div>
+            
+            <div>
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span className="text-ink-500">本月进度</span>
+                <span className={`font-medium ${
+                  budgetProgress.currentMonthPercentage >= 100 ? 'text-red-500' : 'text-ink-700'
+                }`}>
+                  {budgetProgress.currentMonthPercentage.toFixed(1)}%
+                </span>
+              </div>
+              <div className="h-3 bg-cream-200 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    budgetProgress.currentMonthPercentage >= 100
+                      ? 'bg-gradient-to-r from-red-400 to-red-500'
+                      : budgetProgress.currentMonthPercentage >= 80
+                      ? 'bg-gradient-to-r from-gold-400 to-gold-500'
+                      : 'bg-gradient-to-r from-blue-400 to-blue-500'
+                  }`}
+                  style={{ width: `${Math.min(budgetProgress.currentMonthPercentage, 100)}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-ink-400 mt-1">
+                <span>已用 {formatMoney(budgetProgress.currentMonthUsed)}</span>
+                <span>月均预算 {formatMoney(budgetProgress.monthlyBudget)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div 
+          className="card p-5 cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => navigate('/settings')}
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center">
+              <Target size={24} className="text-primary-500" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-ink-800">设置年度预算</p>
+              <p className="text-sm text-ink-400">设定人情支出上限，追踪使用进度</p>
+            </div>
+            <ChevronRight size={20} className="text-ink-300" />
+          </div>
+        </div>
+      )}
       
       <div className="card p-5">
         <h3 className="font-semibold text-ink-800 mb-4 flex items-center gap-2">

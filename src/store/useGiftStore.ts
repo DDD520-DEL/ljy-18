@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion } from '@/types';
+import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, YearlyBudget, BudgetProgress } from '@/types';
 import { 
   getRecords, 
   addRecord as storageAddRecord, 
@@ -9,6 +9,10 @@ import {
   importRecords,
   clearAllRecords,
   getAvailableYears,
+  getYearlyBudget as storageGetYearlyBudget,
+  getAllBudgets as storageGetAllBudgets,
+  setYearlyBudget as storageSetYearlyBudget,
+  deleteYearlyBudget as storageDeleteYearlyBudget,
 } from '@/services/storage';
 import {
   getContactSummaryList,
@@ -18,6 +22,8 @@ import {
   getCurrentYearStats,
   getRecentRecords,
   getTotalStats,
+  getBudgetProgress,
+  checkMonthlyBudgetAfterExpense,
 } from '@/services/statistics';
 import { mockRecords } from '@/data/mockData';
 
@@ -60,6 +66,18 @@ interface GiftStore {
     balance: number;
     recordCount: number;
     contactCount: number;
+  };
+  
+  getYearlyBudget: (year: number) => YearlyBudget | undefined;
+  getAllBudgets: () => YearlyBudget[];
+  setYearlyBudget: (year: number, budget: number) => YearlyBudget;
+  deleteYearlyBudget: (year: number) => boolean;
+  getBudgetProgress: (year: number) => BudgetProgress;
+  checkMonthlyBudgetAfterExpense: (year: number, month: number, additionalAmount: number) => {
+    wouldExceed: boolean;
+    monthlyBudget: number;
+    currentMonthUsed: number;
+    newTotal: number;
   };
 }
 
@@ -141,5 +159,29 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
   
   getTotalStats: () => {
     return getTotalStats();
+  },
+  
+  getYearlyBudget: (year) => {
+    return storageGetYearlyBudget(year);
+  },
+  
+  getAllBudgets: () => {
+    return storageGetAllBudgets();
+  },
+  
+  setYearlyBudget: (year, budget) => {
+    return storageSetYearlyBudget(year, budget);
+  },
+  
+  deleteYearlyBudget: (year) => {
+    return storageDeleteYearlyBudget(year);
+  },
+  
+  getBudgetProgress: (year) => {
+    return getBudgetProgress(year);
+  },
+  
+  checkMonthlyBudgetAfterExpense: (year, month, additionalAmount) => {
+    return checkMonthlyBudgetAfterExpense(year, month, additionalAmount);
   },
 }));

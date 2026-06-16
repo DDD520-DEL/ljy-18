@@ -1,5 +1,5 @@
-import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, EventType } from '@/types';
-import { getRecords, getRecordsByContact, getRecordsByYear, getAvailableYears } from './storage';
+import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, EventType, BudgetProgress } from '@/types';
+import { getRecords, getRecordsByContact, getRecordsByYear, getAvailableYears, getYearlyBudget } from './storage';
 import { formatDate } from '@/utils/date';
 
 export function getContactSummaryList(): ContactSummary[] {
@@ -193,3 +193,53 @@ export function getTotalStats() {
 }
 
 export { getAvailableYears };
+
+export function getBudgetProgress(year: number): BudgetProgress {
+  const yearlyBudget = getYearlyBudget(year);
+  const budget = yearlyBudget?.budget || 0;
+  const yearlyStats = getYearlyStats(year);
+  const used = yearlyStats.totalExpense;
+  const remaining = Math.max(budget - used, 0);
+  const percentage = budget > 0 ? Math.min((used / budget) * 100, 100) : 0;
+  
+  const monthlyBudget = budget > 0 ? budget / 12 : 0;
+  const currentMonth = new Date().getMonth();
+  const currentMonthUsed = yearlyStats.monthlyExpense[currentMonth] || 0;
+  const currentMonthRemaining = Math.max(monthlyBudget - currentMonthUsed, 0);
+  const currentMonthPercentage = monthlyBudget > 0 ? Math.min((currentMonthUsed / monthlyBudget) * 100, 100) : 0;
+  
+  return {
+    year,
+    budget,
+    used,
+    remaining,
+    percentage,
+    monthlyBudget,
+    currentMonthUsed,
+    currentMonthRemaining,
+    currentMonthPercentage,
+    isOverBudget: budget > 0 && used > budget,
+    isMonthOverBudget: monthlyBudget > 0 && currentMonthUsed > monthlyBudget,
+  };
+}
+
+export function checkMonthlyBudgetAfterExpense(year: number, month: number, additionalAmount: number): {
+  wouldExceed: boolean;
+  monthlyBudget: number;
+  currentMonthUsed: number;
+  newTotal: number;
+} {
+  const yearlyBudget = getYearlyBudget(year);
+  const budget = yearlyBudget?.budget || 0;
+  const monthlyBudget = budget > 0 ? budget / 12 : 0;
+  const yearlyStats = getYearlyStats(year);
+  const currentMonthUsed = yearlyStats.monthlyExpense[month] || 0;
+  const newTotal = currentMonthUsed + additionalAmount;
+  
+  return {
+    wouldExceed: monthlyBudget > 0 && newTotal > monthlyBudget,
+    monthlyBudget,
+    currentMonthUsed,
+    newTotal,
+  };
+}

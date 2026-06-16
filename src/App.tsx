@@ -6,6 +6,7 @@ import RecordForm from "@/pages/RecordForm";
 import Contacts from "@/pages/Contacts";
 import ContactDetail from "@/pages/ContactDetail";
 import Statistics from "@/pages/Statistics";
+import Settings from "@/pages/Settings";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/contacts" element={<Contacts />} />
           <Route path="/contacts/:name" element={<ContactDetail />} />
           <Route path="/statistics" element={<Statistics />} />
+          <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>
     </Router>

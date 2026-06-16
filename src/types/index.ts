@@ -83,3 +83,22 @@ export const EVENT_TYPE_COLORS: Record<EventType, string> = {
   promotion: 'bg-blue-100 text-blue-600',
   other: 'bg-purple-100 text-purple-600',
 };
+
+export interface YearlyBudget {
+  year: number;
+  budget: number;
+}
+
+export interface BudgetProgress {
+  year: number;
+  budget: number;
+  used: number;
+  remaining: number;
+  percentage: number;
+  monthlyBudget: number;
+  currentMonthUsed: number;
+  currentMonthRemaining: number;
+  currentMonthPercentage: number;
+  isOverBudget: boolean;
+  isMonthOverBudget: boolean;
+}

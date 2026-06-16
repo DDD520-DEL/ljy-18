@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGiftStore } from '@/store/useGiftStore';
 import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, type EventType, type Direction } from '@/types';
 import { getTodayStr, formatDate } from '@/utils/date';
 import { formatMoney } from '@/utils/money';
-import { ArrowLeft, Save, Lightbulb, Gift } from 'lucide-react';
+import { ArrowLeft, Save, Lightbulb, Gift, AlertCircle } from 'lucide-react';
 
 export default function RecordForm() {
   const navigate = useNavigate();
@@ -15,6 +15,8 @@ export default function RecordForm() {
   const updateRecord = useGiftStore(state => state.updateRecord);
   const getRecordById = useGiftStore(state => state.getRecordById);
   const getGiftSuggestion = useGiftStore(state => state.getGiftSuggestion);
+  const checkMonthlyBudgetAfterExpense = useGiftStore(state => state.checkMonthlyBudgetAfterExpense);
+  const getBudgetProgress = useGiftStore(state => state.getBudgetProgress);
   
   const [contactName, setContactName] = useState('');
   const [eventType, setEventType] = useState<EventType>('wedding');
@@ -24,10 +26,24 @@ export default function RecordForm() {
   const [date, setDate] = useState(getTodayStr());
   const [note, setNote] = useState('');
   const [showSuggestion, setShowSuggestion] = useState(false);
+  const [showBudgetWarning, setShowBudgetWarning] = useState(false);
   
   const suggestion = direction === 'expense' && contactName.trim() 
     ? getGiftSuggestion(contactName.trim()) 
     : null;
+  
+  const budgetCheck = useMemo(() => {
+    if (direction !== 'expense' || !amount || Number(amount) <= 0) {
+      return null;
+    }
+    const recordYear = new Date(date).getFullYear();
+    const recordMonth = new Date(date).getMonth();
+    return checkMonthlyBudgetAfterExpense(recordYear, recordMonth, Number(amount));
+  }, [direction, amount, date, checkMonthlyBudgetAfterExpense]);
+  
+  const currentYearBudget = useMemo(() => {
+    return getBudgetProgress(new Date().getFullYear());
+  }, [getBudgetProgress]);
   
   useEffect(() => {
     if (isEdit && id) {
@@ -82,6 +98,14 @@ export default function RecordForm() {
       addRecord(recordData);
     }
     
+    if (direction === 'expense' && budgetCheck?.wouldExceed) {
+      setShowBudgetWarning(true);
+      setTimeout(() => {
+        navigate('/records');
+      }, 3000);
+      return;
+    }
+    
     navigate('/records');
   };
   
@@ -104,6 +128,49 @@ export default function RecordForm() {
           {isEdit ? '编辑记录' : '添加记录'}
         </h1>
       </div>
+      
+      {showBudgetWarning && budgetCheck && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-slide-up">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-gold-100 rounded-full flex items-center justify-center mb-4">
+                <AlertCircle size={32} className="text-gold-500" />
+              </div>
+              <h3 className="text-xl font-bold text-ink-800 mb-2">温和提醒</h3>
+              <p className="text-ink-500 mb-4">
+                本月支出已达到月均预算
+              </p>
+              <div className="w-full p-4 bg-cream-50 rounded-xl mb-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-ink-400">月均预算</span>
+                  <span className="font-medium text-ink-700 tabular-nums">{formatMoney(budgetCheck.monthlyBudget)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-ink-400">本月已用</span>
+                  <span className="font-medium text-gold-600 tabular-nums">{formatMoney(budgetCheck.currentMonthUsed)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-ink-400">本次支出</span>
+                  <span className="font-medium text-primary-600 tabular-nums">{formatMoney(Number(amount))}</span>
+                </div>
+                <div className="pt-2 border-t border-cream-200 flex justify-between">
+                  <span className="text-ink-400">本月累计</span>
+                  <span className="font-bold text-red-500 tabular-nums">{formatMoney(budgetCheck.newTotal)}</span>
+                </div>
+              </div>
+              <p className="text-sm text-ink-400 mb-4">
+                记录已保存，请注意控制后续支出~
+              </p>
+              <button
+                onClick={() => navigate('/records')}
+                className="w-full py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-semibold"
+              >
+                我知道了
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {showSuggestion && suggestion && (
         <div className="mb-6 p-4 bg-gradient-to-r from-gold-50 to-yellow-50 border border-gold-200 rounded-2xl animate-slide-up">
@@ -135,6 +202,57 @@ export default function RecordForm() {
                 应用建议金额
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      
+      {direction === 'expense' && budgetCheck?.wouldExceed && !showBudgetWarning && (
+        <div className="mb-6 p-4 bg-gradient-to-r from-gold-50 to-orange-50 border border-gold-200 rounded-2xl animate-slide-up">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-gold-500 rounded-xl flex items-center justify-center flex-shrink-0">
+              <AlertCircle size={20} className="text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-gold-700">预算提醒</p>
+              <p className="text-sm text-gold-600 mt-1">
+                添加这笔支出后，本月累计将超过月均预算 
+                <span className="font-bold text-gold-700 mx-1">
+                  {formatMoney(budgetCheck.newTotal - budgetCheck.monthlyBudget)}
+                </span>
+              </p>
+              <p className="text-xs text-gold-500 mt-1">
+                月均预算：{formatMoney(budgetCheck.monthlyBudget)} | 本月已用：{formatMoney(budgetCheck.currentMonthUsed)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {direction === 'expense' && currentYearBudget.budget > 0 && !budgetCheck?.wouldExceed && (
+        <div className="mb-6 p-3 bg-cream-50 border border-cream-200 rounded-xl">
+          <div className="flex items-center justify-between text-sm mb-1.5">
+            <span className="text-ink-400">{new Date(date).getFullYear()}年预算进度</span>
+            <span className={`font-medium ${
+              currentYearBudget.percentage >= 80 ? 'text-gold-600' : 'text-ink-600'
+            }`}>
+              {currentYearBudget.percentage.toFixed(0)}%
+            </span>
+          </div>
+          <div className="h-2 bg-cream-200 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${
+                currentYearBudget.percentage >= 100
+                  ? 'bg-red-500'
+                  : currentYearBudget.percentage >= 80
+                  ? 'bg-gold-500'
+                  : 'bg-primary-500'
+              }`}
+              style={{ width: `${Math.min(currentYearBudget.percentage, 100)}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-xs text-ink-400 mt-1.5">
+            <span>剩余 {formatMoney(currentYearBudget.remaining)}</span>
+            <span>本月剩余 {formatMoney(currentYearBudget.currentMonthRemaining)}</span>
           </div>
         </div>
       )}

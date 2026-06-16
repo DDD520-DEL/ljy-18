@@ -1,6 +1,7 @@
 import { useGiftStore } from '@/store/useGiftStore';
 import StatCard from '@/components/StatCard';
 import RecordItem from '@/components/RecordItem';
+import BudgetProgressCard from '@/components/BudgetProgressCard';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, TrendingDown, Wallet, Users, Plus, ArrowRight } from 'lucide-react';
 import { formatMoneyShort } from '@/utils/money';
@@ -10,10 +11,12 @@ export default function Home() {
   const getCurrentYearStats = useGiftStore(state => state.getCurrentYearStats);
   const getRecentRecords = useGiftStore(state => state.getRecentRecords);
   const getTotalStats = useGiftStore(state => state.getTotalStats);
+  const getBudgetProgress = useGiftStore(state => state.getBudgetProgress);
   
   const yearStats = getCurrentYearStats();
   const recentRecords = getRecentRecords(5);
   const totalStats = getTotalStats();
+  const budgetProgress = getBudgetProgress(new Date().getFullYear());
   
   const currentYear = new Date().getFullYear();
   
@@ -65,6 +68,8 @@ export default function Home() {
           color="blue"
         />
       </div>
+      
+      <BudgetProgressCard progress={budgetProgress} />
       
       <div className="grid md:grid-cols-3 gap-6">
         <div className="md:col-span-2 card p-5">

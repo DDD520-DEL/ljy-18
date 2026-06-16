@@ -1,5 +1,5 @@
-import { NavLink } from 'react-router-dom';
-import { Home, BookOpen, Users, BarChart3 } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { Home, BookOpen, Users, BarChart3, Settings as SettingsIcon } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: '首页', icon: Home },
@@ -9,6 +9,8 @@ const navItems = [
 ];
 
 export default function Header() {
+  const navigate = useNavigate();
+  
   return (
     <header className="bg-white/80 backdrop-blur-md border-b border-cream-200 sticky top-0 z-50">
       <div className="container mx-auto px-4">
@@ -43,9 +45,20 @@ export default function Header() {
                 </NavLink>
               );
             })}
+            <button
+              onClick={() => navigate('/settings')}
+              className="ml-2 p-2 text-ink-500 hover:text-ink-700 hover:bg-cream-100 rounded-lg transition-colors"
+            >
+              <SettingsIcon size={18} />
+            </button>
           </nav>
           
-          <div className="w-10 h-10" />
+          <button
+            onClick={() => navigate('/settings')}
+            className="md:hidden p-2 text-ink-500 hover:text-ink-700 hover:bg-cream-100 rounded-lg transition-colors"
+          >
+            <SettingsIcon size={20} />
+          </button>
         </div>
       </div>
     </header>
