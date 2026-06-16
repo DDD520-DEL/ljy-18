@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGiftStore } from '@/store/useGiftStore';
 import RecordItem from '@/components/RecordItem';
-import { Search, Filter, Plus, ArrowUpDown, Trash2 } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Trash2, Download, Loader2 } from 'lucide-react';
 import { EVENT_TYPE_LABELS, type EventType, type Direction } from '@/types';
 import { formatMoney } from '@/utils/money';
+import { exportRecordsToExcel, formatExportDate, type ExportProgress } from '@/utils/export';
 
 export default function Records() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export default function Records() {
   const [sortOrder, setSortOrder] = useState<'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc'>('date-desc');
   const [showFilter, setShowFilter] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
   
   const filteredRecords = useMemo(() => {
     let result = [...records];
@@ -69,19 +71,49 @@ export default function Records() {
     setDeleteConfirm(null);
   };
   
+  const handleExport = useCallback(async () => {
+    if (exportProgress) return;
+    
+    try {
+      const filename = `礼金记录_${formatExportDate()}.xlsx`;
+      await exportRecordsToExcel(filteredRecords, filename, (progress) => {
+        setExportProgress(progress);
+      });
+    } catch (error) {
+      console.error('导出失败:', error);
+      alert('导出失败，请重试');
+    } finally {
+      setTimeout(() => setExportProgress(null), 500);
+    }
+  }, [filteredRecords, exportProgress]);
+  
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-serif font-bold text-ink-800">
           全部记录
         </h1>
-        <button
-          onClick={() => navigate('/records/add')}
-          className="hidden md:flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-xl font-medium shadow-md transition-all active:scale-95"
-        >
-          <Plus size={18} />
-          添加
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            disabled={!!exportProgress || filteredRecords.length === 0}
+            className="hidden md:flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium shadow-md transition-all active:scale-95"
+          >
+            {exportProgress ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <Download size={18} />
+            )}
+            {exportProgress ? '导出中...' : '导出Excel'}
+          </button>
+          <button
+            onClick={() => navigate('/records/add')}
+            className="hidden md:flex items-center gap-2 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-xl font-medium shadow-md transition-all active:scale-95"
+          >
+            <Plus size={18} />
+            添加
+          </button>
+        </div>
       </div>
       
       <div className="grid grid-cols-2 gap-3">
@@ -111,6 +143,19 @@ export default function Records() {
           />
         </div>
         <button
+          onClick={handleExport}
+          disabled={!!exportProgress || filteredRecords.length === 0}
+          className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl transition-all flex items-center gap-2"
+          title="导出Excel"
+        >
+          {exportProgress ? (
+            <Loader2 size={18} className="animate-spin" />
+          ) : (
+            <Download size={18} />
+          )}
+          <span className="hidden md:inline">{exportProgress ? '导出中...' : '导出'}</span>
+        </button>
+        <button
           onClick={() => setShowFilter(!showFilter)}
           className={`px-4 py-2.5 rounded-xl border transition-all flex items-center gap-2 ${
             showFilter || filterType !== 'all' || filterDirection !== 'all'
@@ -133,6 +178,21 @@ export default function Records() {
           <span className="hidden md:inline">排序</span>
         </button>
       </div>
+      
+      {exportProgress && exportProgress.phase !== 'downloading' && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+          <div className="flex items-center justify-between text-sm text-emerald-700 mb-2">
+            <span>正在导出 {exportProgress.total} 条记录...</span>
+            <span>{Math.round((exportProgress.current / exportProgress.total) * 100)}%</span>
+          </div>
+          <div className="h-2 bg-emerald-100 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+              style={{ width: `${(exportProgress.current / exportProgress.total) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
       
       {showFilter && (
         <div className="bg-white rounded-xl p-4 shadow-sm animate-slide-up">

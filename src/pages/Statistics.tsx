@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useGiftStore } from '@/store/useGiftStore';
 import { 
   BarChart, 
@@ -13,9 +13,10 @@ import {
   Cell,
   Legend
 } from 'recharts';
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, Calendar, Download, Loader2 } from 'lucide-react';
 import { formatMoney, formatMoneyWithSign } from '@/utils/money';
 import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, type EventType } from '@/types';
+import { exportStatisticsToExcel, formatExportDate, type ExportProgress } from '@/utils/export';
 
 const CHART_COLORS = {
   expense: '#C41E3A',
@@ -33,6 +34,7 @@ const TYPE_COLORS: Record<EventType, string> = {
 };
 
 export default function Statistics() {
+  const records = useGiftStore(state => state.records);
   const getAvailableYears = useGiftStore(state => state.getAvailableYears);
   const getYearlyStats = useGiftStore(state => state.getYearlyStats);
   
@@ -41,8 +43,16 @@ export default function Statistics() {
   const [selectedYear, setSelectedYear] = useState(
     availableYears.includes(currentYear) ? currentYear : (availableYears[0] || currentYear)
   );
+  const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
   
   const stats = getYearlyStats(selectedYear);
+  
+  const yearRecords = useMemo(() => {
+    return records.filter(r => {
+      const recordYear = new Date(r.date).getFullYear();
+      return recordYear === selectedYear;
+    });
+  }, [records, selectedYear]);
   
   const currentYearIndex = availableYears.indexOf(selectedYear);
   
@@ -57,6 +67,22 @@ export default function Statistics() {
       setSelectedYear(availableYears[currentYearIndex - 1]);
     }
   };
+  
+  const handleExport = useCallback(async () => {
+    if (exportProgress) return;
+    
+    try {
+      const filename = `${selectedYear}年度统计_${formatExportDate()}.xlsx`;
+      await exportStatisticsToExcel(yearRecords, stats, filename, (progress) => {
+        setExportProgress(progress);
+      });
+    } catch (error) {
+      console.error('导出失败:', error);
+      alert('导出失败，请重试');
+    } finally {
+      setTimeout(() => setExportProgress(null), 500);
+    }
+  }, [yearRecords, stats, selectedYear, exportProgress]);
   
   const monthlyData = Array.from({ length: 12 }, (_, i) => ({
     month: `${i + 1}月`,
@@ -81,7 +107,35 @@ export default function Statistics() {
         <h1 className="text-2xl font-serif font-bold text-ink-800">
           年度统计
         </h1>
+        <button
+          onClick={handleExport}
+          disabled={!!exportProgress || yearRecords.length === 0}
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium shadow-md transition-all active:scale-95"
+        >
+          {exportProgress ? (
+            <Loader2 size={18} className="animate-spin" />
+          ) : (
+            <Download size={18} />
+          )}
+          <span className="hidden md:inline">{exportProgress ? '导出中...' : '导出Excel'}</span>
+          <span className="md:hidden">导出</span>
+        </button>
       </div>
+      
+      {exportProgress && exportProgress.phase !== 'downloading' && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+          <div className="flex items-center justify-between text-sm text-emerald-700 mb-2">
+            <span>正在导出 {exportProgress.total} 条记录...</span>
+            <span>{Math.round((exportProgress.current / exportProgress.total) * 100)}%</span>
+          </div>
+          <div className="h-2 bg-emerald-100 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+              style={{ width: `${(exportProgress.current / exportProgress.total) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
       
       <div className="flex items-center justify-center gap-4 py-2">
         <button
