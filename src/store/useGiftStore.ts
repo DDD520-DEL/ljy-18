@@ -31,6 +31,17 @@ import {
 } from '@/services/statistics';
 import type { ReturnGiftReminder, MergeResult, MergeRecord } from '@/types';
 import { mockRecords } from '@/data/mockData';
+import {
+  exportEncryptedBackup as serviceExportEncryptedBackup,
+  readBackupFile as serviceReadBackupFile,
+  decryptBackup as serviceDecryptBackup,
+  importBackup as serviceImportBackup,
+  checkLocalDataExists as serviceCheckLocalDataExists,
+  type BackupProgress,
+  type BackupFile,
+  type ImportMode,
+  type ImportResult,
+} from '@/services/backup';
 
 function loadInitialRecords(): GiftRecord[] {
   const records = getRecords();
@@ -90,6 +101,12 @@ interface GiftStore {
   mergeContacts: (sourceContactNames: string[], targetContactName: string) => MergeResult;
   undoLastMerge: () => MergeResult;
   getLatestMergeRecord: () => MergeRecord | null;
+
+  exportEncryptedBackup: (password: string, onProgress?: (progress: BackupProgress) => void) => Promise<void>;
+  readBackupFile: (file: File) => Promise<string>;
+  decryptBackup: (encryptedData: string, password: string, onProgress?: (progress: BackupProgress) => void) => Promise<BackupFile>;
+  importBackup: (backupFile: BackupFile, mode: ImportMode, onProgress?: (progress: BackupProgress) => void) => ImportResult;
+  checkLocalDataExists: () => boolean;
 }
 
 export const useGiftStore = create<GiftStore>((set, get) => ({
@@ -218,5 +235,29 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
   
   getLatestMergeRecord: () => {
     return storageGetLatestMergeRecord();
+  },
+
+  exportEncryptedBackup: async (password, onProgress) => {
+    await serviceExportEncryptedBackup(password, onProgress);
+  },
+
+  readBackupFile: async (file) => {
+    return serviceReadBackupFile(file);
+  },
+
+  decryptBackup: async (encryptedData, password, onProgress) => {
+    return serviceDecryptBackup(encryptedData, password, onProgress);
+  },
+
+  importBackup: (backupFile, mode, onProgress) => {
+    const result = serviceImportBackup(backupFile, mode, onProgress);
+    if (result.success) {
+      set({ records: getRecords() });
+    }
+    return result;
+  },
+
+  checkLocalDataExists: () => {
+    return serviceCheckLocalDataExists();
   },
 }));

@@ -35,7 +35,7 @@ function saveStorageData(data: StorageData): void {
   }
 }
 
-function getBudgetStorageData(): YearlyBudget[] {
+export function getBudgetStorageData(): YearlyBudget[] {
   try {
     const raw = localStorage.getItem(BUDGET_STORAGE_KEY);
     if (raw) {
@@ -47,7 +47,7 @@ function getBudgetStorageData(): YearlyBudget[] {
   return [];
 }
 
-function saveBudgetStorageData(budgets: YearlyBudget[]): void {
+export function saveBudgetStorageData(budgets: YearlyBudget[]): void {
   try {
     localStorage.setItem(BUDGET_STORAGE_KEY, JSON.stringify(budgets));
   } catch (e) {
@@ -167,7 +167,7 @@ export function clearAllRecords(): void {
   saveStorageData({ records: [], version: STORAGE_VERSION });
 }
 
-function getMergeHistory(): MergeRecord[] {
+export function getMergeHistory(): MergeRecord[] {
   try {
     const raw = localStorage.getItem(MERGE_HISTORY_KEY);
     if (raw) {
@@ -179,7 +179,7 @@ function getMergeHistory(): MergeRecord[] {
   return [];
 }
 
-function saveMergeHistory(history: MergeRecord[]): void {
+export function saveMergeHistory(history: MergeRecord[]): void {
   try {
     localStorage.setItem(MERGE_HISTORY_KEY, JSON.stringify(history));
   } catch (e) {
