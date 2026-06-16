@@ -1,9 +1,10 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, BookOpen, Users, BarChart3, Settings as SettingsIcon } from 'lucide-react';
+import { Home, BookOpen, Calendar, Users, BarChart3, Settings as SettingsIcon } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: '首页', icon: Home },
   { path: '/records', label: '记录', icon: BookOpen },
+  { path: '/calendar', label: '日历', icon: Calendar },
   { path: '/contacts', label: '往来', icon: Users },
   { path: '/statistics', label: '统计', icon: BarChart3 },
 ];
