@@ -4,7 +4,7 @@ import { useGiftStore } from '@/store/useGiftStore';
 import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, DEFAULT_TAGS, TAG_COLORS, type EventType, type Direction, type RecordTemplate } from '@/types';
 import { getTodayStr, formatDate } from '@/utils/date';
 import { formatMoney } from '@/utils/money';
-import { ArrowLeft, Save, Lightbulb, Gift, AlertCircle, Tag, Plus, X, Image, Bookmark, Trash2, Star } from 'lucide-react';
+import { ArrowLeft, Save, Lightbulb, Gift, AlertCircle, Tag, Plus, X, Image, Bookmark, Trash2, Star, FolderOpen, Check, ChevronDown } from 'lucide-react';
 import ImageUploader from '@/components/ImageUploader';
 import ImagePreview from '@/components/ImagePreview';
 
@@ -26,6 +26,10 @@ export default function RecordForm() {
   const addTemplate = useGiftStore(state => state.addTemplate);
   const removeTemplate = useGiftStore(state => state.removeTemplate);
   const toggleFavorite = useGiftStore(state => state.toggleFavorite);
+  const getGroups = useGiftStore(state => state.getGroups);
+  const getContactGroupId = useGiftStore(state => state.getContactGroupId);
+  const setContactGroup = useGiftStore(state => state.setContactGroup);
+  const refreshRecords = useGiftStore(state => state.refreshRecords);
   
   const [contactName, setContactName] = useState('');
   const [eventType, setEventType] = useState<EventType>('wedding');
@@ -46,6 +50,10 @@ export default function RecordForm() {
   const [templateName, setTemplateName] = useState('');
   const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [showGroupPicker, setShowGroupPicker] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [, forceUpdate] = useState(0);
+  const groupPickerRef = useRef<HTMLDivElement>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTemplateId = useRef<string | null>(null);
   const longPressFiredRef = useRef<boolean>(false);
@@ -98,6 +106,26 @@ export default function RecordForm() {
       setShowSuggestion(false);
     }
   }, [suggestion, direction]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (groupPickerRef.current && !groupPickerRef.current.contains(e.target as Node)) {
+        setShowGroupPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (contactName.trim()) {
+      const groupId = getContactGroupId(contactName.trim());
+      setSelectedGroupId(groupId);
+      forceUpdate(n => n + 1);
+    } else {
+      setSelectedGroupId(null);
+    }
+  }, [contactName, getContactGroupId]);
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,6 +156,11 @@ export default function RecordForm() {
       updateRecord(id, recordData);
     } else {
       addRecord(recordData);
+    }
+
+    if (contactName.trim()) {
+      setContactGroup(contactName.trim(), selectedGroupId);
+      refreshRecords();
     }
     
     if (direction === 'expense' && budgetCheck?.wouldExceed) {
@@ -444,6 +477,61 @@ export default function RecordForm() {
             placeholder="请输入对方姓名或家庭名称"
             className="w-full px-4 py-3 bg-cream-50 border border-cream-200 rounded-xl text-ink-800 placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
           />
+          {contactName.trim() && (
+            <div className="mt-2 relative" ref={groupPickerRef}>
+              <button
+                type="button"
+                onClick={() => setShowGroupPicker(!showGroupPicker)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-cream-50 hover:bg-cream-100 rounded-lg text-xs text-ink-600 transition-all border border-cream-200"
+              >
+                <FolderOpen size={14} />
+                <span>
+                  {selectedGroupId 
+                    ? getGroups().find(g => g.id === selectedGroupId)?.name || '未分组'
+                    : '未分组'}
+                </span>
+                <ChevronDown size={14} className={`transition-transform ${showGroupPicker ? 'rotate-180' : ''}`} />
+              </button>
+              {showGroupPicker && (
+                <div className="absolute z-20 top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-cream-200 py-1 min-w-[160px] animate-in fade-in slide-in-from-top-2 duration-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedGroupId(null);
+                      setShowGroupPicker(false);
+                      forceUpdate(n => n + 1);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-cream-50 transition-all ${
+                      !selectedGroupId ? 'text-primary-600 bg-primary-50' : 'text-ink-600'
+                    }`}
+                  >
+                    {!selectedGroupId && <Check size={16} className="text-primary-500" />}
+                    <span className={!selectedGroupId ? '' : 'ml-6'}>未分组</span>
+                  </button>
+                  {getGroups().map(group => (
+                    <button
+                      type="button"
+                      key={group.id}
+                      onClick={() => {
+                        setSelectedGroupId(group.id);
+                        setShowGroupPicker(false);
+                        forceUpdate(n => n + 1);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-cream-50 transition-all ${
+                        selectedGroupId === group.id ? 'text-primary-600 bg-primary-50' : 'text-ink-600'
+                      }`}
+                    >
+                      {selectedGroupId === group.id && <Check size={16} className="text-primary-500" />}
+                      <span className={selectedGroupId === group.id ? '' : 'ml-6'}>
+                        <span className="mr-1.5">{group.icon}</span>
+                        {group.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         
         <div>

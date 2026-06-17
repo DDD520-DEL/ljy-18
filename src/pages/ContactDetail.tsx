@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGiftStore } from '@/store/useGiftStore';
 import RecordItem from '@/components/RecordItem';
 import ImagePreview from '@/components/ImagePreview';
-import { ArrowLeft, TrendingUp, TrendingDown, Wallet, Gift, Tag, X } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Wallet, Gift, Tag, X, FolderOpen, Check, ChevronDown } from 'lucide-react';
 import { formatMoney } from '@/utils/money';
 import { formatDate } from '@/utils/date';
 import { DEFAULT_TAGS, TAG_COLORS } from '@/types';
@@ -12,11 +12,27 @@ export default function ContactDetail() {
   const { name } = useParams();
   const navigate = useNavigate();
   const getContactDetail = useGiftStore(state => state.getContactDetail);
+  const getGroups = useGiftStore(state => state.getGroups);
+  const setContactGroup = useGiftStore(state => state.setContactGroup);
+  const refreshRecords = useGiftStore(state => state.refreshRecords);
   const preferences = useGiftStore(state => state.preferences);
   const showCents = preferences.showCents;
   
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [previewImages, setPreviewImages] = useState<{ urls: string[]; index: number } | null>(null);
+  const [showGroupPicker, setShowGroupPicker] = useState(false);
+  const [, forceUpdate] = useState(0);
+  const groupPickerRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (groupPickerRef.current && !groupPickerRef.current.contains(e.target as Node)) {
+        setShowGroupPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   
   const contactName = name ? decodeURIComponent(name) : '';
   const contact = getContactDetail(contactName);
@@ -104,11 +120,63 @@ export default function ContactDetail() {
           <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${getAvatarColor(contactName)} flex items-center justify-center text-white font-bold text-2xl shadow-lg`}>
             {contactName.charAt(0)}
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h2 className="text-xl font-bold text-ink-800">{contactName}</h2>
             <p className="text-ink-400 text-sm mt-0.5">
               共 {contact.recordCount} 次往来
             </p>
+            <div className="mt-2 relative" ref={groupPickerRef}>
+              <button
+                onClick={() => setShowGroupPicker(!showGroupPicker)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-cream-50 hover:bg-cream-100 rounded-lg text-xs text-ink-600 transition-all"
+              >
+                <FolderOpen size={14} />
+                <span>
+                  {contact.groupId 
+                    ? getGroups().find(g => g.id === contact.groupId)?.name || '未分组'
+                    : '未分组'}
+                </span>
+                <ChevronDown size={14} className={`transition-transform ${showGroupPicker ? 'rotate-180' : ''}`} />
+              </button>
+              {showGroupPicker && (
+                <div className="absolute z-20 top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-cream-200 py-1 min-w-[160px] animate-in fade-in slide-in-from-top-2 duration-200">
+                  <button
+                    onClick={() => {
+                      setContactGroup(contactName, null);
+                      refreshRecords();
+                      setShowGroupPicker(false);
+                      forceUpdate(n => n + 1);
+                    }}
+                    className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-cream-50 transition-all ${
+                      !contact.groupId ? 'text-primary-600 bg-primary-50' : 'text-ink-600'
+                    }`}
+                  >
+                    {!contact.groupId && <Check size={16} className="text-primary-500" />}
+                    <span className={!contact.groupId ? '' : 'ml-6'}>未分组</span>
+                  </button>
+                  {getGroups().map(group => (
+                    <button
+                      key={group.id}
+                      onClick={() => {
+                        setContactGroup(contactName, group.id);
+                        refreshRecords();
+                        setShowGroupPicker(false);
+                        forceUpdate(n => n + 1);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-cream-50 transition-all ${
+                        contact.groupId === group.id ? 'text-primary-600 bg-primary-50' : 'text-ink-600'
+                      }`}
+                    >
+                      {contact.groupId === group.id && <Check size={16} className="text-primary-500" />}
+                      <span className={contact.groupId === group.id ? '' : 'ml-6'}>
+                        <span className="mr-1.5">{group.icon}</span>
+                        {group.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         

@@ -31,6 +31,7 @@ export const RECYCLE_BIN_DAYS = 30;
 
 export interface ContactSummary {
   name: string;
+  groupId: string | null;
   totalExpense: number;
   totalIncome: number;
   balance: number;
@@ -39,6 +40,16 @@ export interface ContactSummary {
   lastIncomeAmount: number;
   lastIncomeDate: string;
   records: GiftRecord[];
+}
+
+export interface GroupSummary {
+  groupId: string;
+  groupName: string;
+  totalExpense: number;
+  totalIncome: number;
+  balance: number;
+  contactCount: number;
+  recordCount: number;
 }
 
 export interface YearlyStats {
@@ -243,3 +254,26 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   recentRecordsCount: 5,
   showCents: false,
 };
+
+export interface ContactGroup {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const GROUP_COLORS = [
+  'from-primary-500 to-primary-600',
+  'from-emerald-500 to-emerald-600',
+  'from-blue-500 to-blue-600',
+  'from-gold-500 to-gold-600',
+  'from-purple-500 to-purple-600',
+  'from-pink-500 to-pink-600',
+  'from-red-500 to-red-600',
+  'from-cyan-500 to-cyan-600',
+];
+
+export const GROUP_ICONS = ['👨‍👩‍👧', '👥', '💼', '🎓', '🏠', '❤️', '🎉', '📚'];

@@ -1,5 +1,5 @@
-import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, EventType, BudgetProgress, ReturnGiftReminder, ReminderType, RelationNetworkData, NetworkNode, NetworkLink } from '@/types';
-import { getRecords, getRecordsByContact, getRecordsByYear, getAvailableYears, getYearlyBudget } from './storage';
+import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, EventType, BudgetProgress, ReturnGiftReminder, ReminderType, RelationNetworkData, NetworkNode, NetworkLink, GroupSummary, ContactGroup } from '@/types';
+import { getRecords, getRecordsByContact, getRecordsByYear, getAvailableYears, getYearlyBudget, getContactGroupId, getGroups } from './storage';
 import { formatDate } from '@/utils/date';
 
 export function getContactSummaryList(): ContactSummary[] {
@@ -36,6 +36,7 @@ export function getContactSummaryList(): ContactSummary[] {
     
     summaries.push({
       name,
+      groupId: getContactGroupId(name),
       totalExpense,
       totalIncome,
       balance: totalExpense - totalIncome,
@@ -72,6 +73,7 @@ export function getContactDetail(name: string): ContactSummary | null {
   
   return {
     name,
+    groupId: getContactGroupId(name),
     totalExpense,
     totalIncome,
     balance: totalExpense - totalIncome,
@@ -473,4 +475,68 @@ export function getYearlyRelationNetworkData(year: number): RelationNetworkData 
 export function getAllTimeRelationNetworkData(): RelationNetworkData {
   const records = getRecords();
   return getRelationNetworkData(records);
+}
+
+export function getGroupSummaries(): GroupSummary[] {
+  const groups = getGroups();
+  const contactSummaries = getContactSummaryList();
+  
+  const groupMap = new Map<string, ContactSummary[]>();
+  const ungrouped: ContactSummary[] = [];
+  
+  contactSummaries.forEach(contact => {
+    if (contact.groupId) {
+      if (!groupMap.has(contact.groupId)) {
+        groupMap.set(contact.groupId, []);
+      }
+      groupMap.get(contact.groupId)!.push(contact);
+    } else {
+      ungrouped.push(contact);
+    }
+  });
+  
+  const summaries: GroupSummary[] = [];
+  
+  groups.forEach(group => {
+    const contacts = groupMap.get(group.id) || [];
+    const totalExpense = contacts.reduce((sum, c) => sum + c.totalExpense, 0);
+    const totalIncome = contacts.reduce((sum, c) => sum + c.totalIncome, 0);
+    const recordCount = contacts.reduce((sum, c) => sum + c.recordCount, 0);
+    
+    summaries.push({
+      groupId: group.id,
+      groupName: group.name,
+      totalExpense,
+      totalIncome,
+      balance: totalExpense - totalIncome,
+      contactCount: contacts.length,
+      recordCount,
+    });
+  });
+  
+  if (ungrouped.length > 0) {
+    const totalExpense = ungrouped.reduce((sum, c) => sum + c.totalExpense, 0);
+    const totalIncome = ungrouped.reduce((sum, c) => sum + c.totalIncome, 0);
+    const recordCount = ungrouped.reduce((sum, c) => sum + c.recordCount, 0);
+    
+    summaries.push({
+      groupId: '',
+      groupName: '未分组',
+      totalExpense,
+      totalIncome,
+      balance: totalExpense - totalIncome,
+      contactCount: ungrouped.length,
+      recordCount,
+    });
+  }
+  
+  return summaries;
+}
+
+export function getContactSummaryListByGroup(groupId: string | null): ContactSummary[] {
+  const allContacts = getContactSummaryList();
+  if (groupId === null) {
+    return allContacts.filter(c => !c.groupId);
+  }
+  return allContacts.filter(c => c.groupId === groupId);
 }

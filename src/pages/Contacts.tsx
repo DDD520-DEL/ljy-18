@@ -1,13 +1,14 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGiftStore } from '@/store/useGiftStore';
 import { 
   Search, ArrowUpDown, ChevronRight, TrendingUp, TrendingDown, Minus, 
-  Users, X, Check, Merge, Undo2, AlertCircle, CheckCircle2, Tag 
+  Users, X, Check, Merge, Undo2, AlertCircle, CheckCircle2, Tag,
+  Plus, Settings, Edit2, Trash2, FolderOpen, GripVertical
 } from 'lucide-react';
 import { formatMoney } from '@/utils/money';
 import { formatDateShort } from '@/utils/date';
-import { DEFAULT_TAGS, TAG_COLORS, type ContactSummary, type MergeResult } from '@/types';
+import { DEFAULT_TAGS, TAG_COLORS, type ContactSummary, type MergeResult, type ContactGroup, GROUP_COLORS, GROUP_ICONS } from '@/types';
 
 interface ToastState {
   id: number;
@@ -19,12 +20,19 @@ interface ToastState {
 export default function Contacts() {
   const navigate = useNavigate();
   const getContactSummaryList = useGiftStore(state => state.getContactSummaryList);
+  const getGroupSummaries = useGiftStore(state => state.getGroupSummaries);
+  const getGroups = useGiftStore(state => state.getGroups);
+  const addGroup = useGiftStore(state => state.addGroup);
+  const editGroup = useGiftStore(state => state.editGroup);
+  const removeGroup = useGiftStore(state => state.removeGroup);
   const mergeContacts = useGiftStore(state => state.mergeContacts);
   const undoLastMerge = useGiftStore(state => state.undoLastMerge);
   const preferences = useGiftStore(state => state.preferences);
+  const groups = useGiftStore(state => state.groups);
   
   const showCents = preferences.showCents;
   
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'expense' | 'income' | 'balance'>('date');
   const [filterTags, setFilterTags] = useState<string[]>([]);
@@ -34,8 +42,10 @@ export default function Contacts() {
   const [showMergeModal, setShowMergeModal] = useState(false);
   const [targetContactName, setTargetContactName] = useState('');
   const [toasts, setToasts] = useState<ToastState[]>([]);
+  const [showGroupManager, setShowGroupManager] = useState(false);
   
   const contacts = getContactSummaryList();
+  const groupSummaries = getGroupSummaries();
   
   const availableTags = useMemo(() => {
     const tagSet = new Set<string>(DEFAULT_TAGS);
@@ -49,6 +59,14 @@ export default function Contacts() {
   
   const filteredContacts = useMemo(() => {
     let result = [...contacts];
+    
+    if (activeGroupId !== null) {
+      if (activeGroupId === '') {
+        result = result.filter(c => !c.groupId);
+      } else {
+        result = result.filter(c => c.groupId === activeGroupId);
+      }
+    }
     
     if (searchText) {
       const text = searchText.toLowerCase();
@@ -83,11 +101,51 @@ export default function Contacts() {
     }
     
     return result;
-  }, [contacts, searchText, filterTags, sortBy]);
+  }, [contacts, activeGroupId, searchText, filterTags, sortBy]);
 
   const selectedContactList = useMemo(() => {
     return filteredContacts.filter(c => selectedContacts.has(c.name));
   }, [filteredContacts, selectedContacts]);
+
+  const currentGroupSummary = useMemo(() => {
+    if (activeGroupId === null) {
+      const allContacts = contacts;
+      const totalExpense = allContacts.reduce((sum, c) => sum + c.totalExpense, 0);
+      const totalIncome = allContacts.reduce((sum, c) => sum + c.totalIncome, 0);
+      return {
+        groupId: '',
+        groupName: '全部',
+        totalExpense,
+        totalIncome,
+        balance: totalExpense - totalIncome,
+        contactCount: allContacts.length,
+        recordCount: allContacts.reduce((sum, c) => sum + c.recordCount, 0),
+      };
+    }
+    if (activeGroupId === '') {
+      const ungroupedContacts = contacts.filter(c => !c.groupId);
+      const totalExpense = ungroupedContacts.reduce((sum, c) => sum + c.totalExpense, 0);
+      const totalIncome = ungroupedContacts.reduce((sum, c) => sum + c.totalIncome, 0);
+      return {
+        groupId: '',
+        groupName: '未分组',
+        totalExpense,
+        totalIncome,
+        balance: totalExpense - totalIncome,
+        contactCount: ungroupedContacts.length,
+        recordCount: ungroupedContacts.reduce((sum, c) => sum + c.recordCount, 0),
+      };
+    }
+    return groupSummaries.find(g => g.groupId === activeGroupId) || {
+      groupId: activeGroupId,
+      groupName: '',
+      totalExpense: 0,
+      totalIncome: 0,
+      balance: 0,
+      contactCount: 0,
+      recordCount: 0,
+    };
+  }, [activeGroupId, contacts, groupSummaries]);
 
   useEffect(() => {
     if (!isMultiSelectMode) {
@@ -219,6 +277,32 @@ export default function Contacts() {
       showToast(result.message, 'error');
     }
   };
+
+  const tabs = useMemo(() => {
+    const result: Array<{ id: string | null; name: string; icon?: string; count: number }> = [
+      { id: null, name: '全部', count: contacts.length }
+    ];
+    const ungroupedSummary = groupSummaries.find(s => s.groupId === '');
+    const ungroupedCount = contacts.filter(c => !c.groupId).length;
+    if (ungroupedCount > 0 || true) {
+      result.push({
+        id: '',
+        name: '未分组',
+        icon: '📁',
+        count: ungroupedCount,
+      });
+    }
+    groups.forEach(group => {
+      const summary = groupSummaries.find(s => s.groupId === group.id);
+      result.push({
+        id: group.id,
+        name: group.name,
+        icon: group.icon,
+        count: summary?.contactCount || 0,
+      });
+    });
+    return result;
+  }, [groups, groupSummaries, contacts]);
   
   return (
     <div className="space-y-4">
@@ -235,6 +319,13 @@ export default function Contacts() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setShowGroupManager(true)}
+            className="p-2 bg-white border border-cream-200 rounded-xl text-ink-500 hover:bg-cream-50 transition-all"
+            title="管理分组"
+          >
+            <Settings size={18} />
+          </button>
+          <button
             onClick={() => setIsMultiSelectMode(!isMultiSelectMode)}
             className={`px-3 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-1.5 ${
               isMultiSelectMode 
@@ -247,21 +338,47 @@ export default function Contacts() {
           </button>
         </div>
       </div>
-      
+
+      <div className="bg-white rounded-xl p-3 shadow-sm overflow-x-auto">
+        <div className="flex gap-2 min-w-max">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id ?? 'all'}
+              onClick={() => setActiveGroupId(tab.id)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                activeGroupId === tab.id
+                  ? 'bg-primary-500 text-white shadow-sm'
+                  : 'bg-cream-50 text-ink-600 hover:bg-cream-100'
+              }`}
+            >
+              {tab.icon && <span className="text-sm">{tab.icon}</span>}
+              <span>{tab.name}</span>
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                activeGroupId === tab.id
+                  ? 'bg-white/20 text-white'
+                  : 'bg-white text-ink-400'
+              }`}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-white rounded-xl p-4 shadow-sm text-center">
-          <p className="text-2xl font-bold text-ink-800">{contacts.length}</p>
-          <p className="text-xs text-ink-400 mt-1">往来对象</p>
+          <p className="text-2xl font-bold text-ink-800">{currentGroupSummary.contactCount}</p>
+          <p className="text-xs text-ink-400 mt-1">{activeGroupId === null ? '往来对象' : '组内人数'}</p>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm text-center">
           <p className="text-2xl font-bold text-primary-500 tabular-nums">
-            {formatMoney(contacts.reduce((sum, c) => sum + c.totalExpense, 0), showCents).replace('¥', '')}
+            {formatMoney(currentGroupSummary.totalExpense, showCents).replace('¥', '')}
           </p>
           <p className="text-xs text-ink-400 mt-1">总支出</p>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm text-center">
           <p className="text-2xl font-bold text-emerald-500 tabular-nums">
-            {formatMoney(contacts.reduce((sum, c) => sum + c.totalIncome, 0), showCents).replace('¥', '')}
+            {formatMoney(currentGroupSummary.totalIncome, showCents).replace('¥', '')}
           </p>
           <p className="text-xs text-ink-400 mt-1">总收入</p>
         </div>
@@ -394,6 +511,9 @@ export default function Contacts() {
                   navigate(`/contacts/${encodeURIComponent(contact.name)}`);
                 }
               }}
+              onGroupChange={() => {
+                setActiveGroupId(prev => prev);
+              }}
             />
           ))
         ) : (
@@ -413,6 +533,13 @@ export default function Contacts() {
           onTargetChange={setTargetContactName}
           onCancel={() => setShowMergeModal(false)}
           onConfirm={handleConfirmMerge}
+        />
+      )}
+
+      {showGroupManager && (
+        <GroupManagerModal
+          groups={groups}
+          onClose={() => setShowGroupManager(false)}
         />
       )}
 
@@ -438,6 +565,7 @@ interface ContactCardProps {
   isSelected: boolean;
   onToggleSelect: () => void;
   onClick: () => void;
+  onGroupChange?: () => void;
 }
 
 function ContactCard({ 
@@ -447,14 +575,30 @@ function ContactCard({
   isMultiSelectMode,
   isSelected,
   onToggleSelect,
-  onClick 
+  onClick,
+  onGroupChange
 }: ContactCardProps) {
   const preferences = useGiftStore(state => state.preferences);
+  const groups = useGiftStore(state => state.groups);
+  const setContactGroup = useGiftStore(state => state.setContactGroup);
   const showCents = preferences.showCents;
   const StatusIcon = balanceStatus.icon;
   const maxAmount = Math.max(contact.totalExpense, contact.totalIncome, 1);
   const expensePercent = (contact.totalExpense / maxAmount) * 100;
   const incomePercent = (contact.totalIncome / maxAmount) * 100;
+  const [showGroupMenu, setShowGroupMenu] = useState(false);
+  const groupMenuRef = useRef<HTMLDivElement>(null);
+  const [, forceUpdate] = useState(0);
+  
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (groupMenuRef.current && !groupMenuRef.current.contains(e.target as Node)) {
+        setShowGroupMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   
   const contactTags = useMemo(() => {
     const tagSet = new Set<string>();
@@ -463,6 +607,15 @@ function ContactCard({
     });
     return Array.from(tagSet).slice(0, 4);
   }, [contact.records]);
+  
+  const currentGroup = contact.groupId ? groups.find(g => g.id === contact.groupId) : null;
+  
+  const handleSetGroup = (groupId: string | null) => {
+    setContactGroup(contact.name, groupId);
+    setShowGroupMenu(false);
+    forceUpdate(n => n + 1);
+    onGroupChange?.();
+  };
   
   return (
     <div
@@ -498,8 +651,71 @@ function ContactCard({
         </div>
         
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-ink-800 truncate">{contact.name}</h3>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <h3 className="font-semibold text-ink-800 truncate">{contact.name}</h3>
+              {!isMultiSelectMode && (
+                <div className="relative flex-shrink-0" ref={groupMenuRef}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowGroupMenu(!showGroupMenu);
+                    }}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] transition-all hover:opacity-80 ${
+                      currentGroup 
+                        ? `bg-gradient-to-r ${currentGroup.color} text-white shadow-sm`
+                        : 'bg-cream-100 text-ink-500 hover:bg-cream-200'
+                    }`}
+                  >
+                    {currentGroup ? (
+                      <>
+                        <span>{currentGroup.icon}</span>
+                        <span>{currentGroup.name}</span>
+                      </>
+                    ) : (
+                      <>
+                        <FolderOpen size={10} />
+                        <span>未分组</span>
+                      </>
+                    )}
+                  </button>
+                  {showGroupMenu && (
+                    <div className="absolute z-30 top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-cream-200 py-1 min-w-[140px] animate-in fade-in slide-in-from-top-2 duration-200">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSetGroup(null);
+                        }}
+                        className={`w-full px-3 py-1.5 text-left text-xs flex items-center gap-1.5 hover:bg-cream-50 transition-all ${
+                          !contact.groupId ? 'text-primary-600 bg-primary-50' : 'text-ink-600'
+                        }`}
+                      >
+                        {!contact.groupId && <Check size={12} className="text-primary-500 flex-shrink-0" />}
+                        <span className={!contact.groupId ? '' : 'ml-[22px]'}>未分组</span>
+                      </button>
+                      {groups.map(group => (
+                        <button
+                          key={group.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSetGroup(group.id);
+                          }}
+                          className={`w-full px-3 py-1.5 text-left text-xs flex items-center gap-1.5 hover:bg-cream-50 transition-all ${
+                            contact.groupId === group.id ? 'text-primary-600 bg-primary-50' : 'text-ink-600'
+                          }`}
+                        >
+                          {contact.groupId === group.id && <Check size={12} className="text-primary-500 flex-shrink-0" />}
+                          <span className={contact.groupId === group.id ? '' : 'ml-[22px]'}>
+                            <span className="mr-1">{group.icon}</span>
+                            {group.name}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             {!isMultiSelectMode && <ChevronRight size={18} className="text-ink-300 flex-shrink-0" />}
           </div>
           
@@ -722,6 +938,277 @@ function Toast({ toast, onClose, onUndo }: ToastProps) {
         >
           <X size={16} />
         </button>
+      )}
+    </div>
+  );
+}
+
+interface GroupManagerModalProps {
+  groups: ContactGroup[];
+  onClose: () => void;
+}
+
+function GroupManagerModal({ groups, onClose }: GroupManagerModalProps) {
+  const addGroup = useGiftStore(state => state.addGroup);
+  const editGroup = useGiftStore(state => state.editGroup);
+  const removeGroup = useGiftStore(state => state.removeGroup);
+  const refreshGroups = useGiftStore(state => state.refreshGroups);
+  
+  const [editingGroup, setEditingGroup] = useState<ContactGroup | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+  const [groupName, setGroupName] = useState('');
+  const [selectedColor, setSelectedColor] = useState(GROUP_COLORS[0]);
+  const [selectedIcon, setSelectedIcon] = useState(GROUP_ICONS[0]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+
+  const openAddModal = () => {
+    setIsAdding(true);
+    setEditingGroup(null);
+    setGroupName('');
+    setSelectedColor(GROUP_COLORS[0]);
+    setSelectedIcon(GROUP_ICONS[0]);
+  };
+
+  const openEditModal = (group: ContactGroup) => {
+    setIsAdding(false);
+    setEditingGroup(group);
+    setGroupName(group.name);
+    setSelectedColor(group.color);
+    setSelectedIcon(group.icon);
+  };
+
+  const handleSave = () => {
+    if (!groupName.trim()) return;
+    
+    if (isAdding) {
+      addGroup(groupName.trim(), selectedColor, selectedIcon);
+    } else if (editingGroup) {
+      editGroup(editingGroup.id, {
+        name: groupName.trim(),
+        color: selectedColor,
+        icon: selectedIcon,
+      });
+    }
+    
+    setIsAdding(false);
+    setEditingGroup(null);
+    setGroupName('');
+    refreshGroups();
+  };
+
+  const handleDelete = (groupId: string) => {
+    removeGroup(groupId);
+    setShowDeleteConfirm(null);
+    refreshGroups();
+  };
+
+  const showForm = isAdding || editingGroup;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 max-h-[80vh] flex flex-col">
+        <div className="p-5 border-b border-cream-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center">
+              <FolderOpen size={20} className="text-primary-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-ink-800">分组管理</h2>
+              <p className="text-xs text-ink-400 mt-0.5">
+                共 {groups.length} 个分组
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-cream-100 rounded-lg transition-all"
+          >
+            <X size={20} className="text-ink-500" />
+          </button>
+        </div>
+
+        <div className="p-5 flex-1 overflow-y-auto">
+          {!showForm ? (
+            <div className="space-y-2">
+              {groups.length > 0 ? (
+                groups.map((group) => (
+                  <div
+                    key={group.id}
+                    className="flex items-center gap-3 p-3 rounded-xl border border-cream-200 hover:bg-cream-50 transition-all"
+                  >
+                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${group.color} flex items-center justify-center text-white text-lg shadow-sm`}>
+                      {group.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-ink-800">{group.name}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => openEditModal(group)}
+                        className="p-2 hover:bg-cream-100 rounded-lg transition-all text-ink-500"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(group.id)}
+                        className="p-2 hover:bg-red-50 rounded-lg transition-all text-red-500"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-ink-300">
+                  <p className="text-3xl mb-2">📁</p>
+                  <p className="text-sm">暂无分组</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-ink-700 mb-2">
+                  分组名称
+                </label>
+                <input
+                  type="text"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  placeholder="输入分组名称"
+                  className="w-full px-4 py-2.5 bg-white border border-cream-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-ink-700 mb-2">
+                  选择图标
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {GROUP_ICONS.map((icon) => (
+                    <button
+                      key={icon}
+                      onClick={() => setSelectedIcon(icon)}
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all ${
+                        selectedIcon === icon
+                          ? 'bg-primary-100 ring-2 ring-primary-500'
+                          : 'bg-cream-50 hover:bg-cream-100'
+                      }`}
+                    >
+                      {icon}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-ink-700 mb-2">
+                  选择颜色
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {GROUP_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setSelectedColor(color)}
+                      className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} transition-all ${
+                        selectedColor === color
+                          ? 'ring-2 ring-offset-2 ring-primary-500'
+                          : 'hover:scale-105'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-cream-50 rounded-xl p-3 flex items-center gap-3">
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${selectedColor} flex items-center justify-center text-white text-2xl shadow-sm`}>
+                  {selectedIcon}
+                </div>
+                <div>
+                  <p className="font-medium text-ink-800">
+                    {groupName || '分组名称'}
+                  </p>
+                  <p className="text-xs text-ink-400">预览效果</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="p-5 border-t border-cream-100 flex gap-3">
+          {!showForm ? (
+            <>
+              <button
+                onClick={onClose}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-cream-200 text-ink-600 font-medium hover:bg-cream-50 transition-all"
+              >
+                关闭
+              </button>
+              <button
+                onClick={openAddModal}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-primary-500 text-white font-medium hover:bg-primary-600 shadow-sm transition-all flex items-center justify-center gap-2"
+              >
+                <Plus size={18} />
+                新建分组
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => {
+                  setIsAdding(false);
+                  setEditingGroup(null);
+                }}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-cream-200 text-ink-600 font-medium hover:bg-cream-50 transition-all"
+              >
+                返回
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={!groupName.trim()}
+                className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-all flex items-center justify-center gap-2 ${
+                  groupName.trim()
+                    ? 'bg-primary-500 text-white hover:bg-primary-600 shadow-sm'
+                    : 'bg-cream-100 text-ink-300 cursor-not-allowed'
+                }`}
+              >
+                <Check size={18} />
+                {isAdding ? '创建' : '保存'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-5 text-center">
+              <div className="w-14 h-14 mx-auto rounded-full bg-red-100 flex items-center justify-center mb-4">
+                <AlertCircle size={28} className="text-red-500" />
+              </div>
+              <h3 className="text-lg font-bold text-ink-800 mb-2">确认删除分组？</h3>
+              <p className="text-sm text-ink-500">
+                删除后，该分组内的联系人将变为未分组状态，联系人记录不会被删除。
+              </p>
+            </div>
+            <div className="p-5 border-t border-cream-100 flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-cream-200 text-ink-600 font-medium hover:bg-cream-50 transition-all"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => handleDelete(showDeleteConfirm)}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 shadow-sm transition-all"
+              >
+                确认删除
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

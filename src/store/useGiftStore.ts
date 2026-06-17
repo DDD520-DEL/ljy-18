@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, YearlyBudget, BudgetProgress, ReturnGiftReminder, MergeResult, MergeRecord, Ledger, RelationNetworkData, UserPreferences, RecordTemplate } from '@/types';
+import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, YearlyBudget, BudgetProgress, ReturnGiftReminder, MergeResult, MergeRecord, Ledger, RelationNetworkData, UserPreferences, RecordTemplate, ContactGroup, GroupSummary } from '@/types';
 import { 
   getRecords, 
   addRecord as storageAddRecord, 
@@ -36,6 +36,12 @@ import {
   deleteTemplate as storageDeleteTemplate,
   toggleFavorite as storageToggleFavorite,
   getFavoriteRecords as storageGetFavoriteRecords,
+  getGroups as storageGetGroups,
+  createGroup as storageCreateGroup,
+  updateGroup as storageUpdateGroup,
+  deleteGroup as storageDeleteGroup,
+  setContactGroup as storageSetContactGroup,
+  getContactGroupId as storageGetContactGroupId,
 } from '@/services/storage';
 import {
   getContactSummaryList,
@@ -51,6 +57,8 @@ import {
   getRelationNetworkData,
   getYearlyRelationNetworkData,
   getAllTimeRelationNetworkData,
+  getGroupSummaries,
+  getContactSummaryListByGroup,
 } from '@/services/statistics';
 import { mockRecords } from '@/data/mockData';
 import {
@@ -94,6 +102,7 @@ interface GiftStore {
   isInitialized: boolean;
   preferences: UserPreferences;
   templates: RecordTemplate[];
+  groups: ContactGroup[];
   
   initialize: () => void;
   loadMockData: () => void;
@@ -170,6 +179,18 @@ interface GiftStore {
   
   toggleFavorite: (id: string) => GiftRecord | null;
   getFavoriteRecords: () => GiftRecord[];
+
+  getGroups: () => ContactGroup[];
+  refreshGroups: () => void;
+  addGroup: (name: string, color: string, icon: string) => ContactGroup;
+  editGroup: (groupId: string, updates: Partial<ContactGroup>) => ContactGroup | null;
+  removeGroup: (groupId: string) => boolean;
+  
+  getGroupSummaries: () => GroupSummary[];
+  getContactSummaryListByGroup: (groupId: string | null) => ContactSummary[];
+  
+  setContactGroup: (contactName: string, groupId: string | null) => boolean;
+  getContactGroupId: (contactName: string) => string | null;
 }
 
 export const useGiftStore = create<GiftStore>((set, get) => ({
@@ -181,6 +202,7 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
   isInitialized: false,
   preferences: storageGetUserPreferences(),
   templates: [],
+  groups: [],
   
   initialize: () => {
     const { isInitialized } = get();
@@ -197,8 +219,9 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
     const recycleBinCount = storageGetRecycleBinCount();
     const preferences = storageGetUserPreferences();
     const templates = storageGetTemplates();
+    const groups = storageGetGroups();
     
-    set({ records, recycleBinRecords, recycleBinCount, ledgers, currentLedgerId, isInitialized: true, preferences, templates });
+    set({ records, recycleBinRecords, recycleBinCount, ledgers, currentLedgerId, isInitialized: true, preferences, templates, groups });
   },
   
   loadMockData: () => {
@@ -397,7 +420,8 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
     const recycleBinRecords = storageGetRecycleBinRecords();
     const recycleBinCount = storageGetRecycleBinCount();
     const ledgers = storageGetLedgers();
-    set({ currentLedgerId: ledgerId, records, recycleBinRecords, recycleBinCount, ledgers });
+    const groups = storageGetGroups();
+    set({ currentLedgerId: ledgerId, records, recycleBinRecords, recycleBinCount, ledgers, groups });
   },
 
   addLedger: (name, icon, color) => {
@@ -492,5 +516,55 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
 
   getFavoriteRecords: () => {
     return storageGetFavoriteRecords();
+  },
+
+  getGroups: () => {
+    return storageGetGroups();
+  },
+
+  refreshGroups: () => {
+    set({ groups: storageGetGroups() });
+  },
+
+  addGroup: (name, color, icon) => {
+    const newGroup = storageCreateGroup(name, color, icon);
+    set({ groups: storageGetGroups() });
+    return newGroup;
+  },
+
+  editGroup: (groupId, updates) => {
+    const result = storageUpdateGroup(groupId, updates);
+    if (result) {
+      set({ groups: storageGetGroups() });
+    }
+    return result;
+  },
+
+  removeGroup: (groupId) => {
+    const success = storageDeleteGroup(groupId);
+    if (success) {
+      set({ groups: storageGetGroups() });
+    }
+    return success;
+  },
+
+  getGroupSummaries: () => {
+    return getGroupSummaries();
+  },
+
+  getContactSummaryListByGroup: (groupId) => {
+    return getContactSummaryListByGroup(groupId);
+  },
+
+  setContactGroup: (contactName, groupId) => {
+    const success = storageSetContactGroup(contactName, groupId);
+    if (success) {
+      set({ records: getRecords() });
+    }
+    return success;
+  },
+
+  getContactGroupId: (contactName) => {
+    return storageGetContactGroupId(contactName);
   },
 }));

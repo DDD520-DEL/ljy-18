@@ -1,4 +1,4 @@
-import type { GiftRecord, YearlyBudget, MergeRecord, MergeResult, Ledger, UserPreferences, RecordTemplate } from '@/types';
+import type { GiftRecord, YearlyBudget, MergeRecord, MergeResult, Ledger, UserPreferences, RecordTemplate, ContactGroup } from '@/types';
 import { generateId } from '@/utils/id';
 import { DEFAULT_PREFERENCES, RECYCLE_BIN_DAYS } from '@/types';
 
@@ -13,6 +13,8 @@ interface LedgerStorageData {
   recycleBin: GiftRecord[];
   budgets: YearlyBudget[];
   mergeHistory: MergeRecord[];
+  groups: ContactGroup[];
+  contactGroups: Record<string, string>;
   version: string;
 }
 
@@ -56,12 +58,18 @@ function getLedgerData(ledgerId: string): LedgerStorageData {
       if (!data.recycleBin) {
         data.recycleBin = [];
       }
+      if (!data.groups) {
+        data.groups = [];
+      }
+      if (!data.contactGroups) {
+        data.contactGroups = {};
+      }
       return data;
     }
   } catch (e) {
     console.error('读取账本数据失败:', e);
   }
-  return { records: [], recycleBin: [], budgets: [], mergeHistory: [], version: STORAGE_VERSION };
+  return { records: [], recycleBin: [], budgets: [], mergeHistory: [], groups: [], contactGroups: {}, version: STORAGE_VERSION };
 }
 
 function saveLedgerData(ledgerId: string, data: LedgerStorageData): void {
@@ -121,6 +129,8 @@ export function createLedger(name: string, icon: string, color: string): Ledger 
     recycleBin: [],
     budgets: [],
     mergeHistory: [],
+    groups: [],
+    contactGroups: {},
     version: STORAGE_VERSION,
   };
   saveLedgerData(newLedger.id, emptyData);
@@ -177,17 +187,12 @@ export function getActiveLedgerId(): string {
   return currentLedgerId;
 }
 
-function getStorageData(): { records: GiftRecord[]; recycleBin: GiftRecord[]; version: string } {
-  const data = getLedgerData(currentLedgerId);
-  return { records: data.records, recycleBin: data.recycleBin, version: data.version };
+function getStorageData(): LedgerStorageData {
+  return getLedgerData(currentLedgerId);
 }
 
-function saveStorageData(data: { records: GiftRecord[]; recycleBin: GiftRecord[]; version: string }): void {
-  const ledgerData = getLedgerData(currentLedgerId);
-  ledgerData.records = data.records;
-  ledgerData.recycleBin = data.recycleBin;
-  ledgerData.version = data.version;
-  saveLedgerData(currentLedgerId, ledgerData);
+function saveStorageData(data: LedgerStorageData): void {
+  saveLedgerData(currentLedgerId, data);
 }
 
 export function getBudgetStorageData(): YearlyBudget[] {
@@ -402,7 +407,12 @@ export function importRecords(records: GiftRecord[]): void {
 }
 
 export function clearAllRecords(): void {
-  saveStorageData({ records: [], recycleBin: [], version: STORAGE_VERSION });
+  const data = getLedgerData(currentLedgerId);
+  saveStorageData({
+    ...data,
+    records: [],
+    recycleBin: [],
+  });
 }
 
 export function getMergeHistory(): MergeRecord[] {
@@ -476,6 +486,15 @@ export function mergeContacts(
   if (updatedCount === 0) {
     return { success: false, message: '未找到需要迁移的记录', updatedCount: 0 };
   }
+
+  const targetHasGroup = !!data.contactGroups[targetContactName];
+  sourceContactNames.forEach(sourceName => {
+    const sourceGroupId = data.contactGroups[sourceName];
+    if (sourceGroupId && !targetHasGroup) {
+      data.contactGroups[targetContactName] = sourceGroupId;
+    }
+    delete data.contactGroups[sourceName];
+  });
 
   saveStorageData(data);
 
@@ -563,6 +582,8 @@ export function migrateLegacyData(): void {
       recycleBin: [],
       budgets: [],
       mergeHistory: [],
+      groups: [],
+      contactGroups: {},
       version: STORAGE_VERSION,
     };
     
@@ -706,4 +727,104 @@ export function getFavoriteRecords(): GiftRecord[] {
       const timeB = b.favoritedAt ? new Date(b.favoritedAt).getTime() : 0;
       return timeB - timeA;
     });
+}
+
+export function getGroups(): ContactGroup[] {
+  const data = getLedgerData(currentLedgerId);
+  return data.groups.sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+export function getGroupById(groupId: string): ContactGroup | undefined {
+  const groups = getGroups();
+  return groups.find(g => g.id === groupId);
+}
+
+export function createGroup(name: string, color: string, icon: string): ContactGroup {
+  const data = getLedgerData(currentLedgerId);
+  const now = new Date().toISOString();
+  const newGroup: ContactGroup = {
+    id: generateId(),
+    name,
+    color,
+    icon,
+    sortOrder: data.groups.length,
+    createdAt: now,
+    updatedAt: now,
+  };
+  data.groups.push(newGroup);
+  saveLedgerData(currentLedgerId, data);
+  return newGroup;
+}
+
+export function updateGroup(groupId: string, updates: Partial<ContactGroup>): ContactGroup | null {
+  const data = getLedgerData(currentLedgerId);
+  const index = data.groups.findIndex(g => g.id === groupId);
+  if (index === -1) return null;
+  
+  const updatedGroup: ContactGroup = {
+    ...data.groups[index],
+    ...updates,
+    id: groupId,
+    updatedAt: new Date().toISOString(),
+  };
+  data.groups[index] = updatedGroup;
+  saveLedgerData(currentLedgerId, data);
+  return updatedGroup;
+}
+
+export function deleteGroup(groupId: string): boolean {
+  const data = getLedgerData(currentLedgerId);
+  const initialLength = data.groups.length;
+  data.groups = data.groups.filter(g => g.id !== groupId);
+  if (data.groups.length === initialLength) return false;
+  
+  Object.keys(data.contactGroups).forEach(contactName => {
+    if (data.contactGroups[contactName] === groupId) {
+      delete data.contactGroups[contactName];
+    }
+  });
+  
+  saveLedgerData(currentLedgerId, data);
+  return true;
+}
+
+export function getContactGroupId(contactName: string): string | null {
+  const data = getLedgerData(currentLedgerId);
+  return data.contactGroups[contactName] || null;
+}
+
+export function setContactGroup(contactName: string, groupId: string | null): boolean {
+  const data = getLedgerData(currentLedgerId);
+  if (groupId === null) {
+    delete data.contactGroups[contactName];
+  } else {
+    data.contactGroups[contactName] = groupId;
+  }
+  saveLedgerData(currentLedgerId, data);
+  return true;
+}
+
+export function getContactsByGroup(groupId: string | null): string[] {
+  const data = getLedgerData(currentLedgerId);
+  if (groupId === null) {
+    const allContacts = new Set(data.records.filter(r => !r.deletedAt).map(r => r.contactName));
+    const groupedContacts = new Set(Object.keys(data.contactGroups));
+    return Array.from(allContacts).filter(name => !groupedContacts.has(name));
+  }
+  return Object.entries(data.contactGroups)
+    .filter(([, gid]) => gid === groupId)
+    .map(([name]) => name);
+}
+
+export function reorderGroups(groupIds: string[]): boolean {
+  const data = getLedgerData(currentLedgerId);
+  groupIds.forEach((id, index) => {
+    const group = data.groups.find(g => g.id === id);
+    if (group) {
+      group.sortOrder = index;
+      group.updatedAt = new Date().toISOString();
+    }
+  });
+  saveLedgerData(currentLedgerId, data);
+  return true;
 }
