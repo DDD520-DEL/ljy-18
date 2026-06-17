@@ -34,6 +34,8 @@ import {
   getTemplates as storageGetTemplates,
   addTemplate as storageAddTemplate,
   deleteTemplate as storageDeleteTemplate,
+  toggleFavorite as storageToggleFavorite,
+  getFavoriteRecords as storageGetFavoriteRecords,
 } from '@/services/storage';
 import {
   getContactSummaryList,
@@ -165,6 +167,9 @@ interface GiftStore {
   refreshTemplates: () => void;
   addTemplate: (template: Omit<RecordTemplate, 'id' | 'createdAt'>) => RecordTemplate;
   removeTemplate: (id: string) => boolean;
+  
+  toggleFavorite: (id: string) => GiftRecord | null;
+  getFavoriteRecords: () => GiftRecord[];
 }
 
 export const useGiftStore = create<GiftStore>((set, get) => ({
@@ -475,5 +480,17 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
       set({ templates: storageGetTemplates() });
     }
     return success;
+  },
+
+  toggleFavorite: (id) => {
+    const result = storageToggleFavorite(id);
+    if (result) {
+      set({ records: getRecords() });
+    }
+    return result;
+  },
+
+  getFavoriteRecords: () => {
+    return storageGetFavoriteRecords();
   },
 }));

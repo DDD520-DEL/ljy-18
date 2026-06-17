@@ -258,7 +258,7 @@ export function getRecords(): GiftRecord[] {
   const data = getStorageData();
   return data.records
     .filter(r => !r.deletedAt)
-    .map(r => ({ ...r, tags: r.tags || [], imageUrls: r.imageUrls || [] }))
+    .map(r => ({ ...r, tags: r.tags || [], imageUrls: r.imageUrls || [], isFavorite: r.isFavorite || false }))
     .sort((a, b) => 
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
@@ -276,6 +276,7 @@ export function addRecord(record: Omit<GiftRecord, 'id' | 'createdAt' | 'updated
     ...record,
     tags: record.tags || [],
     imageUrls: record.imageUrls || [],
+    isFavorite: record.isFavorite || false,
     id: generateId(),
     createdAt: now,
     updatedAt: now,
@@ -328,7 +329,7 @@ export function getRecycleBinRecords(): GiftRecord[] {
   cleanExpiredRecycleBin();
   const data = getStorageData();
   return data.recycleBin
-    .map(r => ({ ...r, tags: r.tags || [], imageUrls: r.imageUrls || [] }))
+    .map(r => ({ ...r, tags: r.tags || [], imageUrls: r.imageUrls || [], isFavorite: r.isFavorite || false }))
     .sort((a, b) => {
       const timeA = a.deletedAt ? new Date(a.deletedAt).getTime() : 0;
       const timeB = b.deletedAt ? new Date(b.deletedAt).getTime() : 0;
@@ -674,4 +675,35 @@ export function deleteTemplate(id: string): boolean {
     return false;
   }
   return true;
+}
+
+export function toggleFavorite(id: string): GiftRecord | null {
+  const data = getStorageData();
+  const index = data.records.findIndex(r => r.id === id);
+  if (index === -1) return null;
+  
+  const now = new Date().toISOString();
+  const record = data.records[index];
+  const newIsFavorite = !record.isFavorite;
+  
+  const updatedRecord: GiftRecord = {
+    ...record,
+    isFavorite: newIsFavorite,
+    favoritedAt: newIsFavorite ? now : undefined,
+    updatedAt: now,
+  };
+  data.records[index] = updatedRecord;
+  saveStorageData(data);
+  return updatedRecord;
+}
+
+export function getFavoriteRecords(): GiftRecord[] {
+  const records = getRecords();
+  return records
+    .filter(r => r.isFavorite)
+    .sort((a, b) => {
+      const timeA = a.favoritedAt ? new Date(a.favoritedAt).getTime() : 0;
+      const timeB = b.favoritedAt ? new Date(b.favoritedAt).getTime() : 0;
+      return timeB - timeA;
+    });
 }

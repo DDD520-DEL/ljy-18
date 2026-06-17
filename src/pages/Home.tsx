@@ -6,7 +6,7 @@ import BudgetProgressCard from '@/components/BudgetProgressCard';
 import ReminderCard from '@/components/ReminderCard';
 import ImagePreview from '@/components/ImagePreview';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, TrendingDown, Wallet, Users, Plus, ArrowRight, Bell } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet, Users, Plus, ArrowRight, Bell, Star } from 'lucide-react';
 import { formatMoneyShort } from '@/utils/money';
 
 export default function Home() {
@@ -18,6 +18,7 @@ export default function Home() {
   const getBudgetProgress = useGiftStore(state => state.getBudgetProgress);
   const getReturnGiftReminders = useGiftStore(state => state.getReturnGiftReminders);
   const getCurrentLedger = useGiftStore(state => state.getCurrentLedger);
+  const getFavoriteRecords = useGiftStore(state => state.getFavoriteRecords);
   const preferences = useGiftStore(state => state.preferences);
   
   const yearStats = getCurrentYearStats();
@@ -26,6 +27,7 @@ export default function Home() {
   const budgetProgress = getBudgetProgress(new Date().getFullYear());
   const reminders = getReturnGiftReminders();
   const currentLedger = getCurrentLedger();
+  const favoriteRecords = getFavoriteRecords();
   const showCents = preferences.showCents;
   
   const currentYear = new Date().getFullYear();
@@ -84,6 +86,46 @@ export default function Home() {
                 className="w-full py-3 text-center text-sm text-primary-500 hover:text-primary-600 font-medium"
               >
                 查看全部 {reminders.length} 条提醒
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {favoriteRecords.length > 0 && (
+        <div className="card p-5 border-2 border-amber-200 bg-gradient-to-br from-amber-50/50 to-transparent">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-ink-800 flex items-center gap-2">
+              <Star size={20} className="fill-amber-400 text-amber-500" />
+              重点关注
+              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                {favoriteRecords.length} 条
+              </span>
+            </h2>
+            <button
+              onClick={() => navigate('/records?favorite=true')}
+              className="text-sm text-amber-600 hover:text-amber-700 font-medium flex items-center gap-1 transition-colors"
+            >
+              查看全部
+              <ArrowRight size={16} />
+            </button>
+          </div>
+          
+          <div className="space-y-3">
+            {favoriteRecords.slice(0, 3).map((record) => (
+              <RecordItem
+                key={record.id}
+                record={record}
+                onClick={() => navigate(`/records/${record.id}/edit`)}
+                onImageClick={(urls, index) => setPreviewImages({ urls, index })}
+              />
+            ))}
+            {favoriteRecords.length > 3 && (
+              <button
+                onClick={() => navigate('/records?favorite=true')}
+                className="w-full py-2.5 text-center text-sm text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-colors font-medium"
+              >
+                还有 {favoriteRecords.length - 3} 条收藏记录 →
               </button>
             )}
           </div>

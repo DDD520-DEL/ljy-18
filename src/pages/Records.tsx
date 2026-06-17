@@ -1,29 +1,48 @@
-import { useState, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useGiftStore } from '@/store/useGiftStore';
 import RecordItem from '@/components/RecordItem';
 import ImagePreview from '@/components/ImagePreview';
-import { Search, Filter, Plus, ArrowUpDown, Trash2, Download, Loader2, Tag, X } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Trash2, Download, Loader2, Tag, X, Star } from 'lucide-react';
 import { EVENT_TYPE_LABELS, DEFAULT_TAGS, TAG_COLORS, type EventType, type Direction } from '@/types';
 import { formatMoney } from '@/utils/money';
 import { exportRecordsToExcel, formatExportDate, type ExportProgress } from '@/utils/export';
 
 export default function Records() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const records = useGiftStore(state => state.records);
   const deleteRecord = useGiftStore(state => state.deleteRecord);
   const preferences = useGiftStore(state => state.preferences);
   const showCents = preferences.showCents;
   
+  const favoriteFromUrl = searchParams.get('favorite') === 'true';
+  
   const [searchText, setSearchText] = useState('');
   const [filterType, setFilterType] = useState<EventType | 'all'>('all');
   const [filterDirection, setFilterDirection] = useState<Direction | 'all'>('all');
   const [filterTags, setFilterTags] = useState<string[]>([]);
+  const [filterFavorite, setFilterFavorite] = useState<boolean>(favoriteFromUrl);
   const [sortOrder, setSortOrder] = useState<'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc'>('date-desc');
   const [showFilter, setShowFilter] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
   const [previewImages, setPreviewImages] = useState<{ urls: string[]; index: number } | null>(null);
+  
+  useEffect(() => {
+    setFilterFavorite(favoriteFromUrl);
+  }, [favoriteFromUrl]);
+  
+  const handleFilterFavoriteChange = (value: boolean) => {
+    setFilterFavorite(value);
+    const params = new URLSearchParams(searchParams);
+    if (value) {
+      params.set('favorite', 'true');
+    } else {
+      params.delete('favorite');
+    }
+    setSearchParams(params, { replace: true });
+  };
   
   const availableTags = useMemo(() => {
     const tagSet = new Set<string>(DEFAULT_TAGS);
@@ -60,23 +79,43 @@ export default function Records() {
       });
     }
     
+    if (filterFavorite) {
+      result = result.filter(r => r.isFavorite);
+    }
+    
     switch (sortOrder) {
       case 'date-desc':
-        result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        result.sort((a, b) => {
+          const favDiff = (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
+          if (favDiff !== 0) return favDiff;
+          return new Date(b.date).getTime() - new Date(a.date).getTime();
+        });
         break;
       case 'date-asc':
-        result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        result.sort((a, b) => {
+          const favDiff = (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
+          if (favDiff !== 0) return favDiff;
+          return new Date(a.date).getTime() - new Date(b.date).getTime();
+        });
         break;
       case 'amount-desc':
-        result.sort((a, b) => b.amount - a.amount);
+        result.sort((a, b) => {
+          const favDiff = (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
+          if (favDiff !== 0) return favDiff;
+          return b.amount - a.amount;
+        });
         break;
       case 'amount-asc':
-        result.sort((a, b) => a.amount - b.amount);
+        result.sort((a, b) => {
+          const favDiff = (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0);
+          if (favDiff !== 0) return favDiff;
+          return a.amount - b.amount;
+        });
         break;
     }
     
     return result;
-  }, [records, searchText, filterType, filterDirection, filterTags, sortOrder]);
+  }, [records, searchText, filterType, filterDirection, filterTags, filterFavorite, sortOrder]);
   
   const totalExpense = filteredRecords
     .filter(r => r.direction === 'expense')
@@ -85,6 +124,8 @@ export default function Records() {
   const totalIncome = filteredRecords
     .filter(r => r.direction === 'income')
     .reduce((sum, r) => sum + r.amount, 0);
+  
+  const favoriteCount = records.filter(r => r.isFavorite).length;
   
   const handleDelete = (id: string) => {
     deleteRecord(id);
@@ -117,6 +158,8 @@ export default function Records() {
     }
   }, [filteredRecords, exportProgress]);
   
+  const hasActiveFilters = filterType !== 'all' || filterDirection !== 'all' || filterTags.length > 0 || filterFavorite;
+  
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -146,7 +189,7 @@ export default function Records() {
         </div>
       </div>
       
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <p className="text-sm text-ink-400">筛选后支出</p>
           <p className="text-xl font-bold text-primary-500 tabular-nums mt-1">
@@ -159,10 +202,17 @@ export default function Records() {
             {formatMoney(totalIncome, showCents)}
           </p>
         </div>
+        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-4 shadow-sm border border-amber-200">
+          <p className="text-sm text-amber-700">重点关注</p>
+          <p className="text-xl font-bold text-amber-600 tabular-nums mt-1 flex items-center gap-1.5">
+            <Star size={18} className="fill-amber-400 text-amber-500" />
+            {favoriteCount} 条
+          </p>
+        </div>
       </div>
       
-      <div className="flex gap-2">
-        <div className="flex-1 relative">
+      <div className="flex flex-wrap gap-2">
+        <div className="flex-1 min-w-[200px] relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-300" size={18} />
           <input
             type="text"
@@ -172,6 +222,21 @@ export default function Records() {
             className="w-full pl-10 pr-4 py-2.5 bg-white border border-cream-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
           />
         </div>
+        <button
+          onClick={() => handleFilterFavoriteChange(!filterFavorite)}
+          className={`px-4 py-2.5 rounded-xl border transition-all flex items-center gap-2 ${
+            filterFavorite
+              ? 'bg-amber-100 border-amber-300 text-amber-700'
+              : 'bg-white border-cream-200 text-ink-500 hover:bg-cream-50'
+          }`}
+          title="只看收藏"
+        >
+          <Star
+            size={18}
+            className={filterFavorite ? 'fill-amber-400 text-amber-500' : ''}
+          />
+          <span className="hidden md:inline">只看收藏</span>
+        </button>
         <button
           onClick={handleExport}
           disabled={!!exportProgress || filteredRecords.length === 0}
@@ -188,7 +253,7 @@ export default function Records() {
         <button
           onClick={() => setShowFilter(!showFilter)}
           className={`px-4 py-2.5 rounded-xl border transition-all flex items-center gap-2 ${
-            showFilter || filterType !== 'all' || filterDirection !== 'all' || filterTags.length > 0
+            hasActiveFilters
               ? 'bg-primary-50 border-primary-200 text-primary-600'
               : 'bg-white border-cream-200 text-ink-500'
           }`}
@@ -213,6 +278,73 @@ export default function Records() {
           <span className="hidden md:inline">排序</span>
         </button>
       </div>
+      
+      {hasActiveFilters && (
+        <div className="flex flex-wrap items-center gap-2 p-3 bg-primary-50 border border-primary-100 rounded-xl">
+          <span className="text-sm text-primary-600 font-medium">已筛选：</span>
+          {filterFavorite && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium">
+              <Star size={12} className="fill-amber-400 text-amber-500" />
+              只看收藏
+              <button
+                onClick={() => handleFilterFavoriteChange(false)}
+                className="ml-1 hover:bg-amber-200 rounded-full p-0.5 transition-colors"
+              >
+                <X size={10} />
+              </button>
+            </span>
+          )}
+          {filterType !== 'all' && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary-100 text-primary-700 rounded-lg text-xs font-medium">
+              类型：{EVENT_TYPE_LABELS[filterType]}
+              <button
+                onClick={() => setFilterType('all')}
+                className="ml-1 hover:bg-primary-200 rounded-full p-0.5 transition-colors"
+              >
+                <X size={10} />
+              </button>
+            </span>
+          )}
+          {filterDirection !== 'all' && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary-100 text-primary-700 rounded-lg text-xs font-medium">
+              方向：{filterDirection === 'expense' ? '支出' : '收入'}
+              <button
+                onClick={() => setFilterDirection('all')}
+                className="ml-1 hover:bg-primary-200 rounded-full p-0.5 transition-colors"
+              >
+                <X size={10} />
+              </button>
+            </span>
+          )}
+          {filterTags.map(tag => (
+            <span
+              key={tag}
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium ${TAG_COLORS[tag] || 'bg-primary-100 text-primary-700'}`}
+            >
+              {tag}
+              <button
+                onClick={() => toggleFilterTag(tag)}
+                className="ml-1 hover:bg-black/10 rounded-full p-0.5 transition-colors"
+              >
+                <X size={10} />
+              </button>
+            </span>
+          ))}
+          {(filterType !== 'all' || filterDirection !== 'all' || filterTags.length > 0 || filterFavorite) && (
+            <button
+              onClick={() => {
+                setFilterType('all');
+                setFilterDirection('all');
+                clearFilterTags();
+                handleFilterFavoriteChange(false);
+              }}
+              className="ml-auto text-xs text-primary-500 hover:text-primary-600 font-medium"
+            >
+              清除全部
+            </button>
+          )}
+        </div>
+      )}
       
       {exportProgress && exportProgress.phase !== 'downloading' && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
@@ -357,7 +489,7 @@ export default function Records() {
                   e.stopPropagation();
                   setDeleteConfirm(record.id);
                 }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-ink-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                className="absolute right-16 top-1/2 -translate-y-1/2 p-2 text-ink-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
               >
                 <Trash2 size={18} />
               </button>
@@ -365,9 +497,19 @@ export default function Records() {
           ))
         ) : (
           <div className="text-center py-16 text-ink-300">
-            <p className="text-5xl mb-3">📝</p>
-            <p className="text-lg">暂无记录</p>
-            <p className="text-sm mt-1">试试调整筛选条件</p>
+            <p className="text-5xl mb-3">{filterFavorite ? '⭐' : '📝'}</p>
+            <p className="text-lg">{filterFavorite ? '还没有收藏的记录' : '暂无记录'}</p>
+            <p className="text-sm mt-1">
+              {filterFavorite ? '点击记录上的星标即可收藏重要记录' : '试试调整筛选条件'}
+            </p>
+            {filterFavorite && (
+              <button
+                onClick={() => handleFilterFavoriteChange(false)}
+                className="mt-4 px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl text-sm font-medium transition-colors"
+              >
+                查看全部记录
+              </button>
+            )}
           </div>
         )}
       </div>

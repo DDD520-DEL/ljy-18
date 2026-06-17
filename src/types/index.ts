@@ -23,6 +23,8 @@ export interface GiftRecord {
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
+  isFavorite?: boolean;
+  favoritedAt?: string;
 }
 
 export const RECYCLE_BIN_DAYS = 30;

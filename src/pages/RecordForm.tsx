@@ -4,7 +4,7 @@ import { useGiftStore } from '@/store/useGiftStore';
 import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, DEFAULT_TAGS, TAG_COLORS, type EventType, type Direction, type RecordTemplate } from '@/types';
 import { getTodayStr, formatDate } from '@/utils/date';
 import { formatMoney } from '@/utils/money';
-import { ArrowLeft, Save, Lightbulb, Gift, AlertCircle, Tag, Plus, X, Image, Bookmark, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Lightbulb, Gift, AlertCircle, Tag, Plus, X, Image, Bookmark, Trash2, Star } from 'lucide-react';
 import ImageUploader from '@/components/ImageUploader';
 import ImagePreview from '@/components/ImagePreview';
 
@@ -25,6 +25,7 @@ export default function RecordForm() {
   const templates = useGiftStore(state => state.templates);
   const addTemplate = useGiftStore(state => state.addTemplate);
   const removeTemplate = useGiftStore(state => state.removeTemplate);
+  const toggleFavorite = useGiftStore(state => state.toggleFavorite);
   
   const [contactName, setContactName] = useState('');
   const [eventType, setEventType] = useState<EventType>('wedding');
@@ -44,6 +45,7 @@ export default function RecordForm() {
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
+  const [isFavorite, setIsFavorite] = useState(false);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTemplateId = useRef<string | null>(null);
   const longPressFiredRef = useRef<boolean>(false);
@@ -80,6 +82,7 @@ export default function RecordForm() {
         setNote(record.note);
         setTags(record.tags || []);
         setImageUrls(record.imageUrls || []);
+        setIsFavorite(record.isFavorite || false);
       } else {
         navigate('/records');
       }
@@ -118,6 +121,7 @@ export default function RecordForm() {
       note: note.trim(),
       tags,
       imageUrls,
+      isFavorite,
     };
     
     if (isEdit && id) {
@@ -235,9 +239,37 @@ export default function RecordForm() {
         >
           <ArrowLeft size={20} className="text-ink-600" />
         </button>
-        <h1 className="text-2xl font-serif font-bold text-ink-800">
+        <h1 className="text-2xl font-serif font-bold text-ink-800 flex-1">
           {isEdit ? '编辑记录' : '添加记录'}
         </h1>
+        <button
+          type="button"
+          onClick={() => {
+            if (isEdit && id) {
+              const result = toggleFavorite(id);
+              if (result) {
+                setIsFavorite(result.isFavorite || false);
+              }
+            } else {
+              setIsFavorite(!isFavorite);
+            }
+          }}
+          className={`p-2.5 rounded-xl transition-all active:scale-90 ${
+            isFavorite
+              ? 'bg-amber-100 hover:bg-amber-200'
+              : 'bg-cream-100 hover:bg-cream-200'
+          }`}
+          title={isFavorite ? '取消重点关注' : '标记为重点关注'}
+        >
+          <Star
+            size={22}
+            className={`transition-colors ${
+              isFavorite
+                ? 'fill-amber-400 text-amber-500'
+                : 'text-ink-400'
+            }`}
+          />
+        </button>
       </div>
       
       {showBudgetWarning && budgetCheck && (
