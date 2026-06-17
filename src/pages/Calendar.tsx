@@ -17,6 +17,7 @@ interface DayInfo {
 export default function Calendar() {
   const navigate = useNavigate();
   const records = useGiftStore(state => state.records);
+  const showCents = useGiftStore(state => state.preferences.showCents);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -169,7 +170,7 @@ export default function Calendar() {
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <p className="text-sm text-ink-400">本月收入</p>
           <p className="text-2xl font-bold text-emerald-500 tabular-nums mt-1">
-            {formatMoney(monthStats.income)}
+            {formatMoney(monthStats.income, showCents)}
           </p>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm">
@@ -325,7 +326,7 @@ export default function Calendar() {
                     <div className={`text-right font-semibold tabular-nums ${
                       record.direction === 'expense' ? 'text-primary-500' : 'text-emerald-500'
                     }`}>
-                      {record.direction === 'expense' ? '-' : '+'}{formatMoney(record.amount)}
+                      {record.direction === 'expense' ? '-' : '+'}{formatMoney(record.amount, showCents)}
                     </div>
                   </div>
                 ))

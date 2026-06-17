@@ -2,6 +2,7 @@ import type { BudgetProgress } from '@/types';
 import { formatMoney } from '@/utils/money';
 import { Target, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useGiftStore } from '@/store/useGiftStore';
 
 interface BudgetProgressCardProps {
   progress: BudgetProgress;
@@ -10,6 +11,7 @@ interface BudgetProgressCardProps {
 
 export default function BudgetProgressCard({ progress, compact = false }: BudgetProgressCardProps) {
   const navigate = useNavigate();
+  const showCents = useGiftStore(state => state.preferences.showCents);
   
   if (progress.budget <= 0) {
     if (compact) return null;
@@ -93,16 +95,16 @@ export default function BudgetProgressCard({ progress, compact = false }: Budget
       <div className="grid grid-cols-3 gap-3 mb-4">
         <div>
           <p className="text-xs text-ink-400 mb-1">年度预算</p>
-          <p className="text-lg font-bold text-ink-800 tabular-nums">{formatMoney(progress.budget)}</p>
+          <p className="text-lg font-bold text-ink-800 tabular-nums">{formatMoney(progress.budget, showCents)}</p>
         </div>
         <div>
           <p className="text-xs text-ink-400 mb-1">已使用</p>
-          <p className={`text-lg font-bold tabular-nums ${getTextColor()}`}>{formatMoney(progress.used)}</p>
+          <p className={`text-lg font-bold tabular-nums ${getTextColor()}`}>{formatMoney(progress.used, showCents)}</p>
         </div>
         <div>
           <p className="text-xs text-ink-400 mb-1">剩余额度</p>
           <p className={`text-lg font-bold tabular-nums ${progress.remaining > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-            {formatMoney(progress.remaining)}
+            {formatMoney(progress.remaining, showCents)}
           </p>
         </div>
       </div>
@@ -127,7 +129,7 @@ export default function BudgetProgressCard({ progress, compact = false }: Budget
           <div className="flex items-center justify-between text-sm mb-2">
             <span className="text-ink-500">本月使用</span>
             <span className="text-ink-600 tabular-nums">
-              {formatMoney(progress.currentMonthUsed)} / {formatMoney(progress.monthlyBudget)}
+              {formatMoney(progress.currentMonthUsed, showCents)} / {formatMoney(progress.monthlyBudget, showCents)}
             </span>
           </div>
           <div className="h-2 bg-cream-200 rounded-full overflow-hidden">

@@ -2,11 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useGiftStore } from '@/store/useGiftStore';
 import { 
   ArrowLeft, Save, Target, TrendingUp, Wallet, AlertCircle, Trash2,
-  Download, Upload, Lock, Unlock, Merge, HardDrive, Check, X, Eye, EyeOff
+  Download, Upload, Lock, Unlock, Merge, HardDrive, Check, X, Eye, EyeOff,
+  Settings2, ListTodo, ArrowRightLeft, Banknote
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatMoney } from '@/utils/money';
 import { BACKUP_FILE_EXTENSION, formatBackupTimestamp, type BackupFile, type ImportMode, type BackupProgress } from '@/services/backup';
+import type { Direction } from '@/types';
 
 type ModalType = 'export' | 'import' | 'import-mode' | null;
 
@@ -24,12 +26,19 @@ export default function Settings() {
   const importBackup = useGiftStore(state => state.importBackup);
   const checkLocalDataExists = useGiftStore(state => state.checkLocalDataExists);
   const refreshRecords = useGiftStore(state => state.refreshRecords);
+  const preferences = useGiftStore(state => state.preferences);
+  const updatePreferences = useGiftStore(state => state.updatePreferences);
   
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [budgetInput, setBudgetInput] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [savedBudgets, setSavedBudgets] = useState<ReturnType<typeof getAllBudgets>>([]);
+  const [showPrefSuccess, setShowPrefSuccess] = useState(false);
+  
+  const [defaultDirection, setDefaultDirection] = useState<Direction>(preferences.defaultDirection);
+  const [recentRecordsCount, setRecentRecordsCount] = useState(preferences.recentRecordsCount);
+  const [showCents, setShowCents] = useState(preferences.showCents);
   
   const [modalType, setModalType] = useState<ModalType>(null);
   const [password, setPassword] = useState('');
@@ -73,6 +82,16 @@ export default function Settings() {
     setSavedBudgets(getAllBudgets());
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 2000);
+  };
+  
+  const handleSavePreferences = () => {
+    updatePreferences({
+      defaultDirection,
+      recentRecordsCount,
+      showCents,
+    });
+    setShowPrefSuccess(true);
+    setTimeout(() => setShowPrefSuccess(false), 2000);
   };
   
   const handleDelete = (year: number) => {
@@ -251,7 +270,118 @@ export default function Settings() {
         </div>
       )}
       
+      {showPrefSuccess && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl text-sm flex items-center gap-2 animate-slide-up">
+          <Check size={16} />
+          个性化设置已保存
+        </div>
+      )}
+      
       <div className="space-y-6">
+        <div className="card p-6">
+          <h2 className="text-lg font-semibold text-ink-800 mb-4 flex items-center gap-2">
+            <Settings2 size={20} className="text-primary-500" />
+            个性化偏好
+          </h2>
+          <p className="text-sm text-ink-400 mb-5">
+            自定义应用的行为和展示方式
+          </p>
+          
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-ink-700 mb-3 flex items-center gap-2">
+                <ArrowRightLeft size={16} className="text-primary-500" />
+                记账时默认选中的方向
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDefaultDirection('expense')}
+                  className={`py-3 px-4 rounded-xl font-medium transition-all ${
+                    defaultDirection === 'expense'
+                      ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
+                      : 'bg-cream-100 text-ink-600 hover:bg-cream-200'
+                  }`}
+                >
+                  <span className="text-lg">📤</span>
+                  <span className="block text-sm mt-1">支出（我随出去的）</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDefaultDirection('income')}
+                  className={`py-3 px-4 rounded-xl font-medium transition-all ${
+                    defaultDirection === 'income'
+                      ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                      : 'bg-cream-100 text-ink-600 hover:bg-cream-200'
+                  }`}
+                >
+                  <span className="text-lg">📥</span>
+                  <span className="block text-sm mt-1">收入（对方回礼的）</span>
+                </button>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-ink-700 mb-3 flex items-center gap-2">
+                <ListTodo size={16} className="text-primary-500" />
+                首页展示最近记录的条数
+              </label>
+              <div className="flex gap-2 flex-wrap">
+                {[3, 5, 8, 10, 15, 20].map((count) => (
+                  <button
+                    key={count}
+                    type="button"
+                    onClick={() => setRecentRecordsCount(count)}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                      recentRecordsCount === count
+                        ? 'bg-primary-500 text-white shadow-md'
+                        : 'bg-cream-100 text-ink-600 hover:bg-cream-200'
+                    }`}
+                  >
+                    {count} 条
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-ink-700 mb-3 flex items-center gap-2">
+                <Banknote size={16} className="text-primary-500" />
+                金额显示格式
+              </label>
+              <div className="flex items-center justify-between p-4 bg-cream-50 rounded-xl">
+                <div>
+                  <p className="font-medium text-ink-800">显示角和分</p>
+                  <p className="text-xs text-ink-400 mt-1">
+                    示例：{formatMoney(1234.56, showCents)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCents(!showCents)}
+                  className={`relative w-14 h-8 rounded-full transition-all ${
+                    showCents ? 'bg-primary-500' : 'bg-cream-300'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-all ${
+                      showCents ? 'left-7' : 'left-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+            
+            <button
+              onClick={handleSavePreferences}
+              className="w-full py-3.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-semibold shadow-lg shadow-blue-500/30 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              <Save size={20} />
+              保存个性化设置
+            </button>
+          </div>
+        </div>
+        
         <div className="card p-6">
           <h2 className="text-lg font-semibold text-ink-800 mb-4 flex items-center gap-2">
             <Target size={20} className="text-primary-500" />
@@ -320,10 +450,10 @@ export default function Settings() {
               <div className="p-4 bg-cream-50 rounded-xl">
                 <p className="text-sm text-ink-500 mb-1">当前设置</p>
                 <p className="text-xl font-bold text-ink-800 tabular-nums">
-                  {formatMoney(existingBudget.budget)} / 年
+                  {formatMoney(existingBudget.budget, preferences.showCents)} / 年
                 </p>
                 <p className="text-sm text-ink-400 mt-1">
-                  约 {formatMoney(Math.round(existingBudget.budget / 12))} / 月
+                  约 {formatMoney(Math.round(existingBudget.budget / 12), preferences.showCents)} / 月
                 </p>
               </div>
             )}
@@ -348,20 +478,20 @@ export default function Settings() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-ink-500">年度预算</span>
-                <span className="font-bold text-ink-800 tabular-nums">{formatMoney(budgetProgress.budget)}</span>
+                <span className="font-bold text-ink-800 tabular-nums">{formatMoney(budgetProgress.budget, preferences.showCents)}</span>
               </div>
               
               <div className="flex items-center justify-between">
                 <span className="text-ink-500">已使用</span>
                 <span className={`font-bold tabular-nums ${budgetProgress.isOverBudget ? 'text-red-500' : 'text-primary-500'}`}>
-                  {formatMoney(budgetProgress.used)}
+                  {formatMoney(budgetProgress.used, preferences.showCents)}
                 </span>
               </div>
               
               <div className="flex items-center justify-between">
                 <span className="text-ink-500">剩余额度</span>
                 <span className={`font-bold tabular-nums ${budgetProgress.remaining <= 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-                  {formatMoney(budgetProgress.remaining)}
+                  {formatMoney(budgetProgress.remaining, preferences.showCents)}
                 </span>
               </div>
               
@@ -390,7 +520,7 @@ export default function Settings() {
                 <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
                   <AlertCircle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-red-600">
-                    本年度支出已超过预算 {formatMoney(budgetProgress.used - budgetProgress.budget)}，请注意控制支出~
+                    本年度支出已超过预算 {formatMoney(budgetProgress.used - budgetProgress.budget, preferences.showCents)}，请注意控制支出~
                   </p>
                 </div>
               )}
@@ -415,7 +545,7 @@ export default function Settings() {
                     <div className="flex-1">
                       <p className="font-medium text-ink-800">{budget.year}年</p>
                       <p className="text-sm text-ink-400 tabular-nums">
-                        {formatMoney(progress.used)} / {formatMoney(budget.budget)}
+                        {formatMoney(progress.used, preferences.showCents)} / {formatMoney(budget.budget, preferences.showCents)}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">

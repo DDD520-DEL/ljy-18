@@ -12,6 +12,8 @@ export default function ContactDetail() {
   const { name } = useParams();
   const navigate = useNavigate();
   const getContactDetail = useGiftStore(state => state.getContactDetail);
+  const preferences = useGiftStore(state => state.preferences);
+  const showCents = preferences.showCents;
   
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [previewImages, setPreviewImages] = useState<{ urls: string[]; index: number } | null>(null);
@@ -116,7 +118,7 @@ export default function ContactDetail() {
               <TrendingUp size={20} className="text-primary-500" />
             </div>
             <p className="text-lg font-bold text-primary-500 tabular-nums">
-              {formatMoney(contact.totalExpense)}
+              {formatMoney(contact.totalExpense, showCents)}
             </p>
             <p className="text-xs text-ink-400 mt-1">我随出</p>
           </div>
@@ -126,7 +128,7 @@ export default function ContactDetail() {
               <TrendingDown size={20} className="text-emerald-500" />
             </div>
             <p className="text-lg font-bold text-emerald-500 tabular-nums">
-              {formatMoney(contact.totalIncome)}
+              {formatMoney(contact.totalIncome, showCents)}
             </p>
             <p className="text-xs text-ink-400 mt-1">对方随来</p>
           </div>
@@ -136,7 +138,7 @@ export default function ContactDetail() {
               <Wallet size={20} className={balancePositive ? 'text-gold-500' : 'text-blue-500'} />
             </div>
             <p className={`text-lg font-bold tabular-nums ${balancePositive ? 'text-gold-500' : 'text-blue-500'}`}>
-              {balancePositive ? '+' : '-'}{formatMoney(Math.abs(contact.balance)).replace('¥', '')}
+              {balancePositive ? '+' : '-'}{formatMoney(Math.abs(contact.balance), showCents).replace('¥', '')}
             </p>
             <p className="text-xs text-ink-400 mt-1">差额</p>
           </div>
@@ -156,7 +158,7 @@ export default function ContactDetail() {
                 />
               </div>
               <span className="text-xs font-medium text-primary-500 w-16 text-right tabular-nums">
-                {formatMoney(contact.totalExpense)}
+                {formatMoney(contact.totalExpense, showCents)}
               </span>
             </div>
             <div className="flex items-center gap-3">
@@ -168,7 +170,7 @@ export default function ContactDetail() {
                 />
               </div>
               <span className="text-xs font-medium text-emerald-500 w-16 text-right tabular-nums">
-                {formatMoney(contact.totalIncome)}
+                {formatMoney(contact.totalIncome, showCents)}
               </span>
             </div>
           </div>
@@ -182,7 +184,7 @@ export default function ContactDetail() {
             </div>
             <div className="mt-2">
               <p className="text-lg font-bold text-gold-600 tabular-nums">
-                {formatMoney(contact.lastIncomeAmount)}
+                {formatMoney(contact.lastIncomeAmount, showCents)}
               </p>
               <p className="text-xs text-gold-500 mt-0.5">
                 {formatDate(contact.lastIncomeDate)}

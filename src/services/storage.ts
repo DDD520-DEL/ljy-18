@@ -1,8 +1,10 @@
-import type { GiftRecord, YearlyBudget, MergeRecord, MergeResult, Ledger } from '@/types';
+import type { GiftRecord, YearlyBudget, MergeRecord, MergeResult, Ledger, UserPreferences } from '@/types';
 import { generateId } from '@/utils/id';
+import { DEFAULT_PREFERENCES } from '@/types';
 
 const LEDGERS_KEY = 'gift_ledger_ledgers';
 const CURRENT_LEDGER_KEY = 'gift_ledger_current';
+const PREFERENCES_KEY = 'gift_ledger_preferences';
 const STORAGE_VERSION = '2.0';
 const MAX_MERGE_HISTORY = 10;
 
@@ -498,5 +500,36 @@ export function migrateLegacyData(): void {
     
   } catch (e) {
     console.error('迁移旧数据失败:', e);
+  }
+}
+
+export function getUserPreferences(): UserPreferences {
+  try {
+    const raw = localStorage.getItem(PREFERENCES_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      return {
+        ...DEFAULT_PREFERENCES,
+        ...data,
+      };
+    }
+  } catch (e) {
+    console.error('读取用户偏好设置失败:', e);
+  }
+  return { ...DEFAULT_PREFERENCES };
+}
+
+export function setUserPreferences(preferences: Partial<UserPreferences>): UserPreferences {
+  try {
+    const current = getUserPreferences();
+    const updated: UserPreferences = {
+      ...current,
+      ...preferences,
+    };
+    localStorage.setItem(PREFERENCES_KEY, JSON.stringify(updated));
+    return updated;
+  } catch (e) {
+    console.error('保存用户偏好设置失败:', e);
+    return { ...DEFAULT_PREFERENCES };
   }
 }

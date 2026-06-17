@@ -18,13 +18,15 @@ export default function Home() {
   const getBudgetProgress = useGiftStore(state => state.getBudgetProgress);
   const getReturnGiftReminders = useGiftStore(state => state.getReturnGiftReminders);
   const getCurrentLedger = useGiftStore(state => state.getCurrentLedger);
+  const preferences = useGiftStore(state => state.preferences);
   
   const yearStats = getCurrentYearStats();
-  const recentRecords = getRecentRecords(5);
+  const recentRecords = getRecentRecords(preferences.recentRecordsCount);
   const totalStats = getTotalStats();
   const budgetProgress = getBudgetProgress(new Date().getFullYear());
   const reminders = getReturnGiftReminders();
   const currentLedger = getCurrentLedger();
+  const showCents = preferences.showCents;
   
   const currentYear = new Date().getFullYear();
   
@@ -91,19 +93,19 @@ export default function Home() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
           title="本年支出"
-          value={formatMoneyShort(yearStats.totalExpense)}
+          value={formatMoneyShort(yearStats.totalExpense, showCents)}
           icon={<TrendingUp size={24} className="text-white" />}
           color="red"
         />
         <StatCard
           title="本年收入"
-          value={formatMoneyShort(yearStats.totalIncome)}
+          value={formatMoneyShort(yearStats.totalIncome, showCents)}
           icon={<TrendingDown size={24} className="text-white" />}
           color="green"
         />
         <StatCard
           title="本年结余"
-          value={formatMoneyShort(Math.abs(yearStats.balance))}
+          value={formatMoneyShort(Math.abs(yearStats.balance), showCents)}
           icon={<Wallet size={24} className="text-white" />}
           color="gold"
           trend={yearStats.balance >= 0 ? '收入多' : '支出多'}

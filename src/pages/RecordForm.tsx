@@ -21,12 +21,15 @@ export default function RecordForm() {
   const getGiftSuggestion = useGiftStore(state => state.getGiftSuggestion);
   const checkMonthlyBudgetAfterExpense = useGiftStore(state => state.checkMonthlyBudgetAfterExpense);
   const getBudgetProgress = useGiftStore(state => state.getBudgetProgress);
+  const preferences = useGiftStore(state => state.preferences);
   
   const [contactName, setContactName] = useState('');
   const [eventType, setEventType] = useState<EventType>('wedding');
   const [eventName, setEventName] = useState('');
   const [amount, setAmount] = useState('');
-  const [direction, setDirection] = useState<Direction>('expense');
+  const [direction, setDirection] = useState<Direction>(
+    isEdit ? 'expense' : preferences.defaultDirection
+  );
   const [date, setDate] = useState(dateFromUrl || getTodayStr());
   const [note, setNote] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -35,6 +38,8 @@ export default function RecordForm() {
   const [showBudgetWarning, setShowBudgetWarning] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [previewImages, setPreviewImages] = useState<{ urls: string[]; index: number } | null>(null);
+  
+  const showCents = preferences.showCents;
   
   const suggestion = direction === 'expense' && contactName.trim() 
     ? getGiftSuggestion(contactName.trim()) 
@@ -177,19 +182,19 @@ export default function RecordForm() {
               <div className="w-full p-4 bg-cream-50 rounded-xl mb-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-ink-400">月均预算</span>
-                  <span className="font-medium text-ink-700 tabular-nums">{formatMoney(budgetCheck.monthlyBudget)}</span>
+                  <span className="font-medium text-ink-700 tabular-nums">{formatMoney(budgetCheck.monthlyBudget, showCents)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-ink-400">本月已用</span>
-                  <span className="font-medium text-gold-600 tabular-nums">{formatMoney(budgetCheck.currentMonthUsed)}</span>
+                  <span className="font-medium text-gold-600 tabular-nums">{formatMoney(budgetCheck.currentMonthUsed, showCents)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-ink-400">本次支出</span>
-                  <span className="font-medium text-primary-600 tabular-nums">{formatMoney(Number(amount))}</span>
+                  <span className="font-medium text-primary-600 tabular-nums">{formatMoney(Number(amount), showCents)}</span>
                 </div>
                 <div className="pt-2 border-t border-cream-200 flex justify-between">
                   <span className="text-ink-400">本月累计</span>
-                  <span className="font-bold text-red-500 tabular-nums">{formatMoney(budgetCheck.newTotal)}</span>
+                  <span className="font-bold text-red-500 tabular-nums">{formatMoney(budgetCheck.newTotal, showCents)}</span>
                 </div>
               </div>
               <p className="text-sm text-ink-400 mb-4">
@@ -220,13 +225,13 @@ export default function RecordForm() {
               <p className="text-sm text-gold-600 mt-1">
                 {formatDate(suggestion.lastIncomeDate)} 对方随了 
                 <span className="font-bold text-gold-700 mx-1">
-                  {formatMoney(suggestion.lastIncomeAmount)}
+                  {formatMoney(suggestion.lastIncomeAmount, showCents)}
                 </span>
               </p>
               <p className="text-sm text-gold-600">
                 建议回礼不低于 
                 <span className="font-bold text-gold-700">
-                  {formatMoney(suggestion.suggestedAmount)}
+                  {formatMoney(suggestion.suggestedAmount, showCents)}
                 </span>
               </p>
               <button
@@ -251,11 +256,11 @@ export default function RecordForm() {
               <p className="text-sm text-gold-600 mt-1">
                 添加这笔支出后，本月累计将超过月均预算 
                 <span className="font-bold text-gold-700 mx-1">
-                  {formatMoney(budgetCheck.newTotal - budgetCheck.monthlyBudget)}
+                  {formatMoney(budgetCheck.newTotal - budgetCheck.monthlyBudget, showCents)}
                 </span>
               </p>
               <p className="text-xs text-gold-500 mt-1">
-                月均预算：{formatMoney(budgetCheck.monthlyBudget)} | 本月已用：{formatMoney(budgetCheck.currentMonthUsed)}
+                月均预算：{formatMoney(budgetCheck.monthlyBudget, showCents)} | 本月已用：{formatMoney(budgetCheck.currentMonthUsed, showCents)}
               </p>
             </div>
           </div>
@@ -285,8 +290,8 @@ export default function RecordForm() {
             />
           </div>
           <div className="flex justify-between text-xs text-ink-400 mt-1.5">
-            <span>剩余 {formatMoney(currentYearBudget.remaining)}</span>
-            <span>本月剩余 {formatMoney(currentYearBudget.currentMonthRemaining)}</span>
+            <span>剩余 {formatMoney(currentYearBudget.remaining, showCents)}</span>
+            <span>本月剩余 {formatMoney(currentYearBudget.currentMonthRemaining, showCents)}</span>
           </div>
         </div>
       )}

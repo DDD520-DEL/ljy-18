@@ -3,6 +3,7 @@ import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide, t
 import type { RelationNetworkData } from '@/types';
 import { formatMoney } from '@/utils/money';
 import { ZoomIn, ZoomOut, Maximize2, RotateCcw, Users, Layers } from 'lucide-react';
+import { useGiftStore } from '@/store/useGiftStore';
 
 interface SimNode extends SimulationNodeDatum {
   id: string;
@@ -76,6 +77,7 @@ export default function RelationNetworkGraph({ data }: Props) {
   const simLinksRef = useRef<SimLink[]>([]);
   const animFrameRef = useRef<number>(0);
   const [, forceTick] = useState(0);
+  const showCents = useGiftStore(state => state.preferences.showCents);
 
   const { minAmount, maxAmount, minFreq, maxFreq } = useMemo(() => {
     const amounts = data.nodes.map(n => n.totalAmount);
@@ -539,7 +541,7 @@ export default function RelationNetworkGraph({ data }: Props) {
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="bg-cream-50 rounded-lg p-2">
               <p className="text-xs text-ink-400">往来总额</p>
-              <p className="font-bold text-ink-800">{formatMoney(node.totalAmount)}</p>
+              <p className="font-bold text-ink-800">{formatMoney(node.totalAmount, showCents)}</p>
             </div>
             <div className="bg-cream-50 rounded-lg p-2">
               <p className="text-xs text-ink-400">往来笔数</p>
@@ -547,11 +549,11 @@ export default function RelationNetworkGraph({ data }: Props) {
             </div>
             <div className="bg-red-50 rounded-lg p-2">
               <p className="text-xs text-red-400">我随出</p>
-              <p className="font-bold text-red-600">{formatMoney(node.totalExpense)}</p>
+              <p className="font-bold text-red-600">{formatMoney(node.totalExpense, showCents)}</p>
             </div>
             <div className="bg-emerald-50 rounded-lg p-2">
               <p className="text-xs text-emerald-400">我收到</p>
-              <p className="font-bold text-emerald-600">{formatMoney(node.totalIncome)}</p>
+              <p className="font-bold text-emerald-600">{formatMoney(node.totalIncome, showCents)}</p>
             </div>
           </div>
         </div>
@@ -570,7 +572,7 @@ export default function RelationNetworkGraph({ data }: Props) {
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="bg-cream-50 rounded-lg p-2">
               <p className="text-xs text-ink-400">往来总额</p>
-              <p className="font-bold text-ink-800">{formatMoney(link.totalAmount)}</p>
+              <p className="font-bold text-ink-800">{formatMoney(link.totalAmount, showCents)}</p>
             </div>
             <div className="bg-cream-50 rounded-lg p-2">
               <p className="text-xs text-ink-400">往来频次</p>
@@ -579,13 +581,13 @@ export default function RelationNetworkGraph({ data }: Props) {
             {link.expenseCount > 0 && (
               <div className="bg-red-50 rounded-lg p-2">
                 <p className="text-xs text-red-400">我随出 {link.expenseCount}次</p>
-                <p className="font-bold text-red-600">{formatMoney(link.expenseAmount)}</p>
+                <p className="font-bold text-red-600">{formatMoney(link.expenseAmount, showCents)}</p>
               </div>
             )}
             {link.incomeCount > 0 && (
               <div className="bg-emerald-50 rounded-lg p-2">
                 <p className="text-xs text-emerald-400">我收到 {link.incomeCount}次</p>
-                <p className="font-bold text-emerald-600">{formatMoney(link.incomeAmount)}</p>
+                <p className="font-bold text-emerald-600">{formatMoney(link.incomeAmount, showCents)}</p>
               </div>
             )}
           </div>
@@ -686,7 +688,7 @@ export default function RelationNetworkGraph({ data }: Props) {
           </div>
           <div className="text-center">
             <p className="text-ink-400 text-[10px]">总金额</p>
-            <p className="font-bold text-primary-600 text-sm">{formatMoney(data.summary.totalAmount)}</p>
+            <p className="font-bold text-primary-600 text-sm">{formatMoney(data.summary.totalAmount, showCents)}</p>
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import type { ReturnGiftReminder } from '@/types';
 import { Gift, Clock, AlertTriangle, TrendingUp, ArrowRight } from 'lucide-react';
 import { formatDate } from '@/utils/date';
 import { formatMoney } from '@/utils/money';
+import { useGiftStore } from '@/store/useGiftStore';
 
 interface ReminderCardProps {
   reminder: ReturnGiftReminder;
@@ -47,6 +48,7 @@ const urgencyDot = {
 export default function ReminderCard({ reminder, onClick }: ReminderCardProps) {
   const config = typeConfig[reminder.type];
   const Icon = config.icon;
+  const showCents = useGiftStore(state => state.preferences.showCents);
 
   const getAvatarColor = (name: string) => {
     const colors = [
@@ -88,11 +90,11 @@ export default function ReminderCard({ reminder, onClick }: ReminderCardProps) {
           <div className="flex items-center gap-4 mt-3 text-xs">
             <div className="flex items-center gap-1 text-ink-500">
               <Gift size={14} className={config.iconColor} />
-              <span>上次随礼: {formatMoney(reminder.lastIncomeAmount)}</span>
+              <span>上次随礼: {formatMoney(reminder.lastIncomeAmount, showCents)}</span>
             </div>
             <div className="flex items-center gap-1 text-ink-500">
               <span className={config.iconColor}>💰</span>
-              <span>建议回礼: <span className={`font-medium ${config.textColor}`}>{formatMoney(reminder.suggestedAmount)}</span></span>
+              <span>建议回礼: <span className={`font-medium ${config.textColor}`}>{formatMoney(reminder.suggestedAmount, showCents)}</span></span>
             </div>
           </div>
 

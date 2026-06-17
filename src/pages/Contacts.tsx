@@ -21,6 +21,9 @@ export default function Contacts() {
   const getContactSummaryList = useGiftStore(state => state.getContactSummaryList);
   const mergeContacts = useGiftStore(state => state.mergeContacts);
   const undoLastMerge = useGiftStore(state => state.undoLastMerge);
+  const preferences = useGiftStore(state => state.preferences);
+  
+  const showCents = preferences.showCents;
   
   const [searchText, setSearchText] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'expense' | 'income' | 'balance'>('date');
@@ -252,13 +255,13 @@ export default function Contacts() {
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm text-center">
           <p className="text-2xl font-bold text-primary-500 tabular-nums">
-            {formatMoney(contacts.reduce((sum, c) => sum + c.totalExpense, 0)).replace('¥', '')}
+            {formatMoney(contacts.reduce((sum, c) => sum + c.totalExpense, 0), showCents).replace('¥', '')}
           </p>
           <p className="text-xs text-ink-400 mt-1">总支出</p>
         </div>
         <div className="bg-white rounded-xl p-4 shadow-sm text-center">
           <p className="text-2xl font-bold text-emerald-500 tabular-nums">
-            {formatMoney(contacts.reduce((sum, c) => sum + c.totalIncome, 0)).replace('¥', '')}
+            {formatMoney(contacts.reduce((sum, c) => sum + c.totalIncome, 0), showCents).replace('¥', '')}
           </p>
           <p className="text-xs text-ink-400 mt-1">总收入</p>
         </div>
@@ -446,6 +449,8 @@ function ContactCard({
   onToggleSelect,
   onClick 
 }: ContactCardProps) {
+  const preferences = useGiftStore(state => state.preferences);
+  const showCents = preferences.showCents;
   const StatusIcon = balanceStatus.icon;
   const maxAmount = Math.max(contact.totalExpense, contact.totalIncome, 1);
   const expensePercent = (contact.totalExpense / maxAmount) * 100;
@@ -525,7 +530,7 @@ function ContactCard({
                 />
               </div>
               <span className="text-xs font-medium text-primary-500 w-16 text-right tabular-nums">
-                {formatMoney(contact.totalExpense)}
+                {formatMoney(contact.totalExpense, showCents)}
               </span>
             </div>
             
@@ -538,7 +543,7 @@ function ContactCard({
                 />
               </div>
               <span className="text-xs font-medium text-emerald-500 w-16 text-right tabular-nums">
-                {formatMoney(contact.totalIncome)}
+                {formatMoney(contact.totalIncome, showCents)}
               </span>
             </div>
           </div>
@@ -547,7 +552,7 @@ function ContactCard({
             <StatusIcon size={14} />
             <span>{balanceStatus.text}</span>
             <span className="font-medium tabular-nums">
-              {Math.abs(contact.balance) > 0 ? formatMoney(Math.abs(contact.balance)) : ''}
+              {Math.abs(contact.balance) > 0 ? formatMoney(Math.abs(contact.balance), showCents) : ''}
             </span>
           </div>
         </div>
@@ -571,6 +576,8 @@ function MergeConfirmModal({
   onCancel,
   onConfirm,
 }: MergeConfirmModalProps) {
+  const preferences = useGiftStore(state => state.preferences);
+  const showCents = preferences.showCents;
   const totalRecords = selectedContacts.reduce((sum, c) => sum + c.recordCount, 0);
 
   return (
@@ -635,7 +642,7 @@ function MergeConfirmModal({
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-ink-800 truncate">{contact.name}</p>
                     <p className="text-xs text-ink-400 mt-0.5">
-                      {contact.recordCount} 条记录 · 收支差 {formatMoney(Math.abs(contact.balance))}
+                      {contact.recordCount} 条记录 · 收支差 {formatMoney(Math.abs(contact.balance), showCents)}
                     </p>
                   </div>
                 </label>

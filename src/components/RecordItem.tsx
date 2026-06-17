@@ -3,6 +3,7 @@ import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, EVENT_TYPE_COLORS, TAG_COLORS } fr
 import { formatDateShort, getRelativeDate } from '@/utils/date';
 import { formatMoney } from '@/utils/money';
 import { ArrowUpRight, ArrowDownLeft, ImageIcon } from 'lucide-react';
+import { useGiftStore } from '@/store/useGiftStore';
 
 interface RecordItemProps {
   record: GiftRecord;
@@ -12,6 +13,7 @@ interface RecordItemProps {
 }
 
 export default function RecordItem({ record, onClick, showDate = true, onImageClick }: RecordItemProps) {
+  const showCents = useGiftStore(state => state.preferences.showCents);
   const isExpense = record.direction === 'expense';
   const tags = record.tags || [];
   const imageUrls = record.imageUrls || [];
@@ -84,7 +86,7 @@ export default function RecordItem({ record, onClick, showDate = true, onImageCl
           ) : (
             <ArrowDownLeft size={18} className="text-emerald-400" />
           )}
-          {isExpense ? '-' : '+'}{formatMoney(record.amount).replace('¥', '')}
+          {isExpense ? '-' : '+'}{formatMoney(record.amount, showCents).replace('¥', '')}
         </div>
         <p className="text-xs text-ink-400 mt-1">
           {isExpense ? '随出' : '收入'}

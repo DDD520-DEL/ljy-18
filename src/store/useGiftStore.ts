@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, YearlyBudget, BudgetProgress, ReturnGiftReminder, MergeResult, MergeRecord, Ledger, RelationNetworkData } from '@/types';
+import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, YearlyBudget, BudgetProgress, ReturnGiftReminder, MergeResult, MergeRecord, Ledger, RelationNetworkData, UserPreferences } from '@/types';
 import { 
   getRecords, 
   addRecord as storageAddRecord, 
@@ -23,6 +23,8 @@ import {
   setActiveLedger,
   getActiveLedgerId,
   migrateLegacyData,
+  getUserPreferences as storageGetUserPreferences,
+  setUserPreferences as storageSetUserPreferences,
 } from '@/services/storage';
 import {
   getContactSummaryList,
@@ -77,10 +79,13 @@ interface GiftStore {
   ledgers: Ledger[];
   currentLedgerId: string;
   isInitialized: boolean;
+  preferences: UserPreferences;
   
   initialize: () => void;
   loadMockData: () => void;
   refreshRecords: () => void;
+  refreshPreferences: () => void;
+  updatePreferences: (preferences: Partial<UserPreferences>) => UserPreferences;
   
   addRecord: (record: Omit<GiftRecord, 'id' | 'createdAt' | 'updatedAt'>) => GiftRecord;
   updateRecord: (id: string, updates: Partial<GiftRecord>) => GiftRecord | null;
@@ -145,6 +150,7 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
   ledgers: [],
   currentLedgerId: '',
   isInitialized: false,
+  preferences: storageGetUserPreferences(),
   
   initialize: () => {
     const { isInitialized } = get();
@@ -155,8 +161,9 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
     const ledgers = storageGetLedgers();
     const currentLedgerId = getActiveLedgerId();
     const records = loadRecordsForCurrentLedger();
+    const preferences = storageGetUserPreferences();
     
-    set({ records, ledgers, currentLedgerId, isInitialized: true });
+    set({ records, ledgers, currentLedgerId, isInitialized: true, preferences });
   },
   
   loadMockData: () => {
@@ -167,6 +174,16 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
   
   refreshRecords: () => {
     set({ records: getRecords() });
+  },
+  
+  refreshPreferences: () => {
+    set({ preferences: storageGetUserPreferences() });
+  },
+  
+  updatePreferences: (preferences) => {
+    const updated = storageSetUserPreferences(preferences);
+    set({ preferences: updated });
+    return updated;
   },
   
   addRecord: (record) => {

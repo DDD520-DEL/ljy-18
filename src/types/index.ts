@@ -214,3 +214,15 @@ export interface RelationNetworkData {
     totalAmount: number;
   };
 }
+
+export interface UserPreferences {
+  defaultDirection: Direction;
+  recentRecordsCount: number;
+  showCents: boolean;
+}
+
+export const DEFAULT_PREFERENCES: UserPreferences = {
+  defaultDirection: 'expense',
+  recentRecordsCount: 5,
+  showCents: false,
+};

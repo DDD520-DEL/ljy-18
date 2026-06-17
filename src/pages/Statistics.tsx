@@ -47,6 +47,7 @@ type NetworkRange = 'all' | 'yearly';
 export default function Statistics() {
   const navigate = useNavigate();
   const records = useGiftStore(state => state.records);
+  const showCents = useGiftStore(state => state.preferences.showCents);
   const getAvailableYears = useGiftStore(state => state.getAvailableYears);
   const getYearlyStats = useGiftStore(state => state.getYearlyStats);
   const getBudgetProgress = useGiftStore(state => state.getBudgetProgress);
@@ -224,7 +225,7 @@ export default function Statistics() {
             <TrendingUp size={20} />
           </div>
           <p className="text-white/80 text-sm">年度支出</p>
-          <p className="text-2xl font-bold mt-1 tabular-nums">{formatMoney(stats.totalExpense)}</p>
+          <p className="text-2xl font-bold mt-1 tabular-nums">{formatMoney(stats.totalExpense, showCents)}</p>
         </div>
         
         <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-4 text-white shadow-card">
@@ -256,7 +257,7 @@ export default function Statistics() {
             {budgetProgress.isOverBudget ? (
               <span className="flex items-center gap-1 text-xs text-red-500 bg-red-50 px-2 py-1 rounded-lg">
                 <AlertTriangle size={14} />
-                已超支 {formatMoney(budgetProgress.used - budgetProgress.budget)}
+                已超支 {formatMoney(budgetProgress.used - budgetProgress.budget, showCents)}
               </span>
             ) : (
               <button
@@ -565,7 +566,7 @@ export default function Statistics() {
                 <span className="text-ink-500">平均每笔支出</span>
                 <span className="font-bold text-primary-500 tabular-nums">
                   {stats.recordCount > 0 
-                    ? formatMoney(Math.round(stats.totalExpense / stats.recordCount * 100) / 100)
+                    ? formatMoney(Math.round(stats.totalExpense / stats.recordCount * 100) / 100, showCents)
                     : '¥0'
                   }
                 </span>

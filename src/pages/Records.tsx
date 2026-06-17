@@ -12,6 +12,8 @@ export default function Records() {
   const navigate = useNavigate();
   const records = useGiftStore(state => state.records);
   const deleteRecord = useGiftStore(state => state.deleteRecord);
+  const preferences = useGiftStore(state => state.preferences);
+  const showCents = preferences.showCents;
   
   const [searchText, setSearchText] = useState('');
   const [filterType, setFilterType] = useState<EventType | 'all'>('all');
@@ -154,7 +156,7 @@ export default function Records() {
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <p className="text-sm text-ink-400">筛选后收入</p>
           <p className="text-xl font-bold text-emerald-500 tabular-nums mt-1">
-            {formatMoney(totalIncome)}
+            {formatMoney(totalIncome, showCents)}
           </p>
         </div>
       </div>
