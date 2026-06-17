@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, YearlyBudget, BudgetProgress } from '@/types';
+import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, YearlyBudget, BudgetProgress, ReturnGiftReminder, MergeResult, MergeRecord, Ledger } from '@/types';
 import { 
   getRecords, 
   addRecord as storageAddRecord, 
@@ -16,6 +16,13 @@ import {
   mergeContacts as storageMergeContacts,
   undoLastMerge as storageUndoLastMerge,
   getLatestMergeRecord as storageGetLatestMergeRecord,
+  getLedgers as storageGetLedgers,
+  createLedger as storageCreateLedger,
+  updateLedger as storageUpdateLedger,
+  deleteLedger as storageDeleteLedger,
+  setActiveLedger,
+  getActiveLedgerId,
+  migrateLegacyData,
 } from '@/services/storage';
 import {
   getContactSummaryList,
@@ -29,7 +36,6 @@ import {
   checkMonthlyBudgetAfterExpense,
   getReturnGiftReminders,
 } from '@/services/statistics';
-import type { ReturnGiftReminder, MergeResult, MergeRecord } from '@/types';
 import { mockRecords } from '@/data/mockData';
 import {
   exportEncryptedBackup as serviceExportEncryptedBackup,
@@ -43,19 +49,30 @@ import {
   type ImportResult,
 } from '@/services/backup';
 
-function loadInitialRecords(): GiftRecord[] {
-  const records = getRecords();
-  if (records.length === 0) {
+function ensureDefaultLedger(): void {
+  migrateLegacyData();
+  
+  const ledgers = storageGetLedgers();
+  if (ledgers.length === 0) {
+    const defaultLedger = storageCreateLedger('我的人情', '🧧', 'from-primary-500 to-primary-700');
+    setActiveLedger(defaultLedger.id);
     importRecords(mockRecords);
-    return getRecords();
+  } else {
+    const activeId = getActiveLedgerId();
+    if (!activeId || !ledgers.find(l => l.id === activeId)) {
+      setActiveLedger(ledgers[0].id);
+    }
   }
-  return records;
 }
 
-const initialRecords = loadInitialRecords();
+function loadRecordsForCurrentLedger(): GiftRecord[] {
+  return getRecords();
+}
 
 interface GiftStore {
   records: GiftRecord[];
+  ledgers: Ledger[];
+  currentLedgerId: string;
   isInitialized: boolean;
   
   initialize: () => void;
@@ -102,6 +119,13 @@ interface GiftStore {
   undoLastMerge: () => MergeResult;
   getLatestMergeRecord: () => MergeRecord | null;
 
+  getCurrentLedger: () => Ledger | undefined;
+  switchLedger: (ledgerId: string) => void;
+  addLedger: (name: string, icon: string, color: string) => Ledger;
+  editLedger: (ledgerId: string, updates: Partial<Ledger>) => Ledger | null;
+  removeLedger: (ledgerId: string) => boolean;
+  refreshLedgers: () => void;
+
   exportEncryptedBackup: (password: string, onProgress?: (progress: BackupProgress) => void) => Promise<void>;
   readBackupFile: (file: File) => Promise<string>;
   decryptBackup: (encryptedData: string, password: string, onProgress?: (progress: BackupProgress) => void) => Promise<BackupFile>;
@@ -110,15 +134,22 @@ interface GiftStore {
 }
 
 export const useGiftStore = create<GiftStore>((set, get) => ({
-  records: initialRecords,
-  isInitialized: true,
+  records: [],
+  ledgers: [],
+  currentLedgerId: '',
+  isInitialized: false,
   
   initialize: () => {
     const { isInitialized } = get();
     if (isInitialized) return;
     
-    const records = loadInitialRecords();
-    set({ records, isInitialized: true });
+    ensureDefaultLedger();
+    
+    const ledgers = storageGetLedgers();
+    const currentLedgerId = getActiveLedgerId();
+    const records = loadRecordsForCurrentLedger();
+    
+    set({ records, ledgers, currentLedgerId, isInitialized: true });
   },
   
   loadMockData: () => {
@@ -235,6 +266,51 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
   
   getLatestMergeRecord: () => {
     return storageGetLatestMergeRecord();
+  },
+
+  getCurrentLedger: () => {
+    const { ledgers, currentLedgerId } = get();
+    return ledgers.find(l => l.id === currentLedgerId);
+  },
+
+  switchLedger: (ledgerId) => {
+    setActiveLedger(ledgerId);
+    const records = loadRecordsForCurrentLedger();
+    const ledgers = storageGetLedgers();
+    set({ currentLedgerId: ledgerId, records, ledgers });
+  },
+
+  addLedger: (name, icon, color) => {
+    const newLedger = storageCreateLedger(name, icon, color);
+    const ledgers = storageGetLedgers();
+    set({ ledgers });
+    return newLedger;
+  },
+
+  editLedger: (ledgerId, updates) => {
+    const result = storageUpdateLedger(ledgerId, updates);
+    if (result) {
+      const ledgers = storageGetLedgers();
+      set({ ledgers });
+    }
+    return result;
+  },
+
+  removeLedger: (ledgerId) => {
+    const success = storageDeleteLedger(ledgerId);
+    if (success) {
+      const ledgers = storageGetLedgers();
+      const currentLedgerId = getActiveLedgerId();
+      const records = loadRecordsForCurrentLedger();
+      set({ ledgers, currentLedgerId, records });
+    }
+    return success;
+  },
+
+  refreshLedgers: () => {
+    const ledgers = storageGetLedgers();
+    const currentLedgerId = getActiveLedgerId();
+    set({ ledgers, currentLedgerId });
   },
 
   exportEncryptedBackup: async (password, onProgress) => {

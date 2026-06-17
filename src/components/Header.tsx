@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Home, BookOpen, Calendar, Users, BarChart3, Settings as SettingsIcon } from 'lucide-react';
+import LedgerSwitcher from './LedgerSwitcher';
 
 const navItems = [
   { path: '/', label: '首页', icon: Home },
@@ -17,12 +18,7 @@ export default function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-lg">
-              <span className="text-xl">🧧</span>
-            </div>
-            <h1 className="text-xl font-serif font-bold text-ink-800">
-              人情账本
-            </h1>
+            <LedgerSwitcher variant="header" />
           </div>
           
           <nav className="hidden md:flex items-center gap-1">

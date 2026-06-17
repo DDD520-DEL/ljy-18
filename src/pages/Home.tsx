@@ -14,19 +14,30 @@ export default function Home() {
   const getTotalStats = useGiftStore(state => state.getTotalStats);
   const getBudgetProgress = useGiftStore(state => state.getBudgetProgress);
   const getReturnGiftReminders = useGiftStore(state => state.getReturnGiftReminders);
+  const getCurrentLedger = useGiftStore(state => state.getCurrentLedger);
   
   const yearStats = getCurrentYearStats();
   const recentRecords = getRecentRecords(5);
   const totalStats = getTotalStats();
   const budgetProgress = getBudgetProgress(new Date().getFullYear());
   const reminders = getReturnGiftReminders();
+  const currentLedger = getCurrentLedger();
   
   const currentYear = new Date().getFullYear();
   
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
+        <div className="md:hidden">
+          <h1 className="text-2xl md:text-3xl font-serif font-bold text-ink-800 flex items-center gap-2">
+            <span className="text-2xl">{currentLedger?.icon || '🧧'}</span>
+            {currentLedger?.name || '人情账本'}
+          </h1>
+          <p className="text-ink-400 mt-1 text-sm">
+            {currentYear}年度人情往来概览
+          </p>
+        </div>
+        <div className="hidden md:block">
           <h1 className="text-2xl md:text-3xl font-serif font-bold text-ink-800">
             人情账本
           </h1>

@@ -1,58 +1,196 @@
-import type { GiftRecord, YearlyBudget, MergeRecord, MergeResult } from '@/types';
+import type { GiftRecord, YearlyBudget, MergeRecord, MergeResult, Ledger } from '@/types';
 import { generateId } from '@/utils/id';
 
-const STORAGE_KEY = 'gift_ledger_records';
-const STORAGE_VERSION = '1.0';
-const BUDGET_STORAGE_KEY = 'gift_ledger_budgets';
-const MERGE_HISTORY_KEY = 'gift_ledger_merge_history';
+const LEDGERS_KEY = 'gift_ledger_ledgers';
+const CURRENT_LEDGER_KEY = 'gift_ledger_current';
+const STORAGE_VERSION = '2.0';
 const MAX_MERGE_HISTORY = 10;
 
-interface StorageData {
+interface LedgerStorageData {
   records: GiftRecord[];
+  budgets: YearlyBudget[];
+  mergeHistory: MergeRecord[];
   version: string;
 }
 
-function getStorageData(): StorageData {
+interface LedgersStorageData {
+  ledgers: Ledger[];
+  version: string;
+}
+
+function getLedgerStorageKey(ledgerId: string): string {
+  return `gift_ledger_data_${ledgerId}`;
+}
+
+function getLedgersData(): LedgersStorageData {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(LEDGERS_KEY);
     if (raw) {
-      const data = JSON.parse(raw) as StorageData;
+      const data = JSON.parse(raw) as LedgersStorageData;
       if (data.version === STORAGE_VERSION) {
         return data;
       }
     }
   } catch (e) {
-    console.error('读取本地存储失败:', e);
+    console.error('读取账本列表失败:', e);
   }
-  return { records: [], version: STORAGE_VERSION };
+  return { ledgers: [], version: STORAGE_VERSION };
 }
 
-function saveStorageData(data: StorageData): void {
+function saveLedgersData(data: LedgersStorageData): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(LEDGERS_KEY, JSON.stringify(data));
   } catch (e) {
-    console.error('保存本地存储失败:', e);
+    console.error('保存账本列表失败:', e);
   }
+}
+
+function getLedgerData(ledgerId: string): LedgerStorageData {
+  try {
+    const raw = localStorage.getItem(getLedgerStorageKey(ledgerId));
+    if (raw) {
+      const data = JSON.parse(raw) as LedgerStorageData;
+      return data;
+    }
+  } catch (e) {
+    console.error('读取账本数据失败:', e);
+  }
+  return { records: [], budgets: [], mergeHistory: [], version: STORAGE_VERSION };
+}
+
+function saveLedgerData(ledgerId: string, data: LedgerStorageData): void {
+  try {
+    localStorage.setItem(getLedgerStorageKey(ledgerId), JSON.stringify(data));
+  } catch (e) {
+    console.error('保存账本数据失败:', e);
+  }
+}
+
+export function getCurrentLedgerId(): string {
+  try {
+    const id = localStorage.getItem(CURRENT_LEDGER_KEY);
+    if (id) return id;
+  } catch (e) {
+    console.error('读取当前账本失败:', e);
+  }
+  return '';
+}
+
+export function setCurrentLedgerId(ledgerId: string): void {
+  try {
+    localStorage.setItem(CURRENT_LEDGER_KEY, ledgerId);
+  } catch (e) {
+    console.error('保存当前账本失败:', e);
+  }
+}
+
+export function getLedgers(): Ledger[] {
+  const data = getLedgersData();
+  return data.ledgers.sort((a, b) => 
+    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+}
+
+export function getLedgerById(ledgerId: string): Ledger | undefined {
+  const ledgers = getLedgers();
+  return ledgers.find(l => l.id === ledgerId);
+}
+
+export function createLedger(name: string, icon: string, color: string): Ledger {
+  const data = getLedgersData();
+  const now = new Date().toISOString();
+  const newLedger: Ledger = {
+    id: generateId(),
+    name,
+    icon,
+    color,
+    createdAt: now,
+    updatedAt: now,
+  };
+  data.ledgers.push(newLedger);
+  saveLedgersData(data);
+  
+  const emptyData: LedgerStorageData = {
+    records: [],
+    budgets: [],
+    mergeHistory: [],
+    version: STORAGE_VERSION,
+  };
+  saveLedgerData(newLedger.id, emptyData);
+  
+  return newLedger;
+}
+
+export function updateLedger(ledgerId: string, updates: Partial<Ledger>): Ledger | null {
+  const data = getLedgersData();
+  const index = data.ledgers.findIndex(l => l.id === ledgerId);
+  if (index === -1) return null;
+  
+  const updatedLedger: Ledger = {
+    ...data.ledgers[index],
+    ...updates,
+    id: ledgerId,
+    updatedAt: new Date().toISOString(),
+  };
+  data.ledgers[index] = updatedLedger;
+  saveLedgersData(data);
+  return updatedLedger;
+}
+
+export function deleteLedger(ledgerId: string): boolean {
+  const data = getLedgersData();
+  const initialLength = data.ledgers.length;
+  data.ledgers = data.ledgers.filter(l => l.id !== ledgerId);
+  if (data.ledgers.length === initialLength) return false;
+  
+  saveLedgersData(data);
+  
+  try {
+    localStorage.removeItem(getLedgerStorageKey(ledgerId));
+  } catch (e) {
+    console.error('删除账本数据失败:', e);
+  }
+  
+  const currentId = getCurrentLedgerId();
+  if (currentId === ledgerId && data.ledgers.length > 0) {
+    setCurrentLedgerId(data.ledgers[0].id);
+  }
+  
+  return true;
+}
+
+let currentLedgerId = getCurrentLedgerId();
+
+export function setActiveLedger(ledgerId: string): void {
+  currentLedgerId = ledgerId;
+  setCurrentLedgerId(ledgerId);
+}
+
+export function getActiveLedgerId(): string {
+  return currentLedgerId;
+}
+
+function getStorageData(): { records: GiftRecord[]; version: string } {
+  const data = getLedgerData(currentLedgerId);
+  return { records: data.records, version: data.version };
+}
+
+function saveStorageData(data: { records: GiftRecord[]; version: string }): void {
+  const ledgerData = getLedgerData(currentLedgerId);
+  ledgerData.records = data.records;
+  ledgerData.version = data.version;
+  saveLedgerData(currentLedgerId, ledgerData);
 }
 
 export function getBudgetStorageData(): YearlyBudget[] {
-  try {
-    const raw = localStorage.getItem(BUDGET_STORAGE_KEY);
-    if (raw) {
-      return JSON.parse(raw) as YearlyBudget[];
-    }
-  } catch (e) {
-    console.error('读取预算存储失败:', e);
-  }
-  return [];
+  const data = getLedgerData(currentLedgerId);
+  return data.budgets;
 }
 
 export function saveBudgetStorageData(budgets: YearlyBudget[]): void {
-  try {
-    localStorage.setItem(BUDGET_STORAGE_KEY, JSON.stringify(budgets));
-  } catch (e) {
-    console.error('保存预算存储失败:', e);
-  }
+  const ledgerData = getLedgerData(currentLedgerId);
+  ledgerData.budgets = budgets;
+  saveLedgerData(currentLedgerId, ledgerData);
 }
 
 export function getYearlyBudget(year: number): YearlyBudget | undefined {
@@ -168,23 +306,14 @@ export function clearAllRecords(): void {
 }
 
 export function getMergeHistory(): MergeRecord[] {
-  try {
-    const raw = localStorage.getItem(MERGE_HISTORY_KEY);
-    if (raw) {
-      return JSON.parse(raw) as MergeRecord[];
-    }
-  } catch (e) {
-    console.error('读取合并历史失败:', e);
-  }
-  return [];
+  const data = getLedgerData(currentLedgerId);
+  return data.mergeHistory;
 }
 
 export function saveMergeHistory(history: MergeRecord[]): void {
-  try {
-    localStorage.setItem(MERGE_HISTORY_KEY, JSON.stringify(history));
-  } catch (e) {
-    console.error('保存合并历史失败:', e);
-  }
+  const ledgerData = getLedgerData(currentLedgerId);
+  ledgerData.mergeHistory = history;
+  saveLedgerData(currentLedgerId, ledgerData);
 }
 
 export function appendMergeHistory(record: MergeRecord): void {
@@ -296,4 +425,74 @@ export function undoLastMerge(): MergeResult {
     message: `已撤销合并，恢复 ${restoredCount} 条记录到原联系人`,
     updatedCount: restoredCount,
   };
+}
+
+export function migrateLegacyData(): void {
+  const legacyKey = 'gift_ledger_records';
+  const legacyBudgetKey = 'gift_ledger_budgets';
+  const legacyMergeKey = 'gift_ledger_merge_history';
+  
+  try {
+    const hasLegacyData = localStorage.getItem(legacyKey);
+    if (!hasLegacyData) return;
+    
+    const ledgersData = getLedgersData();
+    if (ledgersData.ledgers.length > 0) return;
+    
+    const now = new Date().toISOString();
+    const defaultLedger: Ledger = {
+      id: generateId(),
+      name: '我的人情',
+      icon: '🧧',
+      color: 'from-primary-500 to-primary-700',
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    ledgersData.ledgers.push(defaultLedger);
+    saveLedgersData(ledgersData);
+    setCurrentLedgerId(defaultLedger.id);
+    currentLedgerId = defaultLedger.id;
+    
+    const legacyRecords = localStorage.getItem(legacyKey);
+    const legacyBudgets = localStorage.getItem(legacyBudgetKey);
+    const legacyMerge = localStorage.getItem(legacyMergeKey);
+    
+    const ledgerData: LedgerStorageData = {
+      records: [],
+      budgets: [],
+      mergeHistory: [],
+      version: STORAGE_VERSION,
+    };
+    
+    if (legacyRecords) {
+      try {
+        const parsed = JSON.parse(legacyRecords);
+        ledgerData.records = parsed.records || [];
+      } catch (e) {
+        console.error('解析旧记录数据失败:', e);
+      }
+    }
+    
+    if (legacyBudgets) {
+      try {
+        ledgerData.budgets = JSON.parse(legacyBudgets);
+      } catch (e) {
+        console.error('解析旧预算数据失败:', e);
+      }
+    }
+    
+    if (legacyMerge) {
+      try {
+        ledgerData.mergeHistory = JSON.parse(legacyMerge);
+      } catch (e) {
+        console.error('解析旧合并历史失败:', e);
+      }
+    }
+    
+    saveLedgerData(defaultLedger.id, ledgerData);
+    
+  } catch (e) {
+    console.error('迁移旧数据失败:', e);
+  }
 }

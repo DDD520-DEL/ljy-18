@@ -136,3 +136,23 @@ export interface MergeResult {
   message: string;
   updatedCount: number;
 }
+
+export interface Ledger {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const LEDGER_COLORS = [
+  'from-primary-500 to-primary-700',
+  'from-emerald-500 to-emerald-700',
+  'from-blue-500 to-blue-700',
+  'from-gold-500 to-gold-700',
+  'from-purple-500 to-purple-700',
+  'from-pink-500 to-pink-700',
+];
+
+export const LEDGER_ICONS = ['🧧', '👨‍👩‍👧', '💼', '🎂', '🎉', '📚'];
