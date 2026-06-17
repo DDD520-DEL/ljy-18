@@ -25,6 +25,12 @@ import {
   migrateLegacyData,
   getUserPreferences as storageGetUserPreferences,
   setUserPreferences as storageSetUserPreferences,
+  getRecycleBinRecords as storageGetRecycleBinRecords,
+  restoreRecord as storageRestoreRecord,
+  permanentlyDeleteRecord as storagePermanentlyDeleteRecord,
+  clearAllRecycleBin as storageClearAllRecycleBin,
+  getRecycleBinCount as storageGetRecycleBinCount,
+  cleanExpiredRecycleBin as storageCleanExpiredRecycleBin,
 } from '@/services/storage';
 import {
   getContactSummaryList,
@@ -76,6 +82,8 @@ function loadRecordsForCurrentLedger(): GiftRecord[] {
 
 interface GiftStore {
   records: GiftRecord[];
+  recycleBinRecords: GiftRecord[];
+  recycleBinCount: number;
   ledgers: Ledger[];
   currentLedgerId: string;
   isInitialized: boolean;
@@ -91,6 +99,12 @@ interface GiftStore {
   updateRecord: (id: string, updates: Partial<GiftRecord>) => GiftRecord | null;
   deleteRecord: (id: string) => boolean;
   getRecordById: (id: string) => GiftRecord | undefined;
+  
+  getRecycleBinRecords: () => GiftRecord[];
+  refreshRecycleBin: () => void;
+  restoreRecord: (id: string) => boolean;
+  permanentlyDeleteRecord: (id: string) => boolean;
+  clearAllRecycleBin: () => number;
   
   getContactSummaryList: () => ContactSummary[];
   getContactDetail: (name: string) => ContactSummary | null;
@@ -147,6 +161,8 @@ interface GiftStore {
 
 export const useGiftStore = create<GiftStore>((set, get) => ({
   records: [],
+  recycleBinRecords: [],
+  recycleBinCount: 0,
   ledgers: [],
   currentLedgerId: '',
   isInitialized: false,
@@ -158,12 +174,16 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
     
     ensureDefaultLedger();
     
+    storageCleanExpiredRecycleBin();
+    
     const ledgers = storageGetLedgers();
     const currentLedgerId = getActiveLedgerId();
     const records = loadRecordsForCurrentLedger();
+    const recycleBinRecords = storageGetRecycleBinRecords();
+    const recycleBinCount = storageGetRecycleBinCount();
     const preferences = storageGetUserPreferences();
     
-    set({ records, ledgers, currentLedgerId, isInitialized: true, preferences });
+    set({ records, recycleBinRecords, recycleBinCount, ledgers, currentLedgerId, isInitialized: true, preferences });
   },
   
   loadMockData: () => {
@@ -203,13 +223,60 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
   deleteRecord: (id) => {
     const success = storageDeleteRecord(id);
     if (success) {
-      set({ records: getRecords() });
+      set({ 
+        records: getRecords(),
+        recycleBinRecords: storageGetRecycleBinRecords(),
+        recycleBinCount: storageGetRecycleBinCount(),
+      });
     }
     return success;
   },
   
   getRecordById: (id) => {
     return getRecordById(id);
+  },
+  
+  getRecycleBinRecords: () => {
+    return storageGetRecycleBinRecords();
+  },
+  
+  refreshRecycleBin: () => {
+    set({ 
+      recycleBinRecords: storageGetRecycleBinRecords(),
+      recycleBinCount: storageGetRecycleBinCount(),
+    });
+  },
+  
+  restoreRecord: (id) => {
+    const success = storageRestoreRecord(id);
+    if (success) {
+      set({ 
+        records: getRecords(),
+        recycleBinRecords: storageGetRecycleBinRecords(),
+        recycleBinCount: storageGetRecycleBinCount(),
+      });
+    }
+    return success;
+  },
+  
+  permanentlyDeleteRecord: (id) => {
+    const success = storagePermanentlyDeleteRecord(id);
+    if (success) {
+      set({ 
+        recycleBinRecords: storageGetRecycleBinRecords(),
+        recycleBinCount: storageGetRecycleBinCount(),
+      });
+    }
+    return success;
+  },
+  
+  clearAllRecycleBin: () => {
+    const count = storageClearAllRecycleBin();
+    set({ 
+      recycleBinRecords: [],
+      recycleBinCount: 0,
+    });
+    return count;
   },
   
   getContactSummaryList: () => {
@@ -310,9 +377,12 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
 
   switchLedger: (ledgerId) => {
     setActiveLedger(ledgerId);
+    storageCleanExpiredRecycleBin();
     const records = loadRecordsForCurrentLedger();
+    const recycleBinRecords = storageGetRecycleBinRecords();
+    const recycleBinCount = storageGetRecycleBinCount();
     const ledgers = storageGetLedgers();
-    set({ currentLedgerId: ledgerId, records, ledgers });
+    set({ currentLedgerId: ledgerId, records, recycleBinRecords, recycleBinCount, ledgers });
   },
 
   addLedger: (name, icon, color) => {
@@ -336,8 +406,11 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
     if (success) {
       const ledgers = storageGetLedgers();
       const currentLedgerId = getActiveLedgerId();
+      storageCleanExpiredRecycleBin();
       const records = loadRecordsForCurrentLedger();
-      set({ ledgers, currentLedgerId, records });
+      const recycleBinRecords = storageGetRecycleBinRecords();
+      const recycleBinCount = storageGetRecycleBinCount();
+      set({ ledgers, currentLedgerId, records, recycleBinRecords, recycleBinCount });
     }
     return success;
   },
@@ -363,7 +436,11 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
   importBackup: async (backupFile, mode, onProgress) => {
     const result = await serviceImportBackup(backupFile, mode, onProgress);
     if (result.success) {
-      set({ records: getRecords() });
+      set({ 
+        records: getRecords(),
+        recycleBinRecords: storageGetRecycleBinRecords(),
+        recycleBinCount: storageGetRecycleBinCount(),
+      });
     }
     return result;
   },

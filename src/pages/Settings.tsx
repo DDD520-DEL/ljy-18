@@ -3,7 +3,7 @@ import { useGiftStore } from '@/store/useGiftStore';
 import { 
   ArrowLeft, Save, Target, TrendingUp, Wallet, AlertCircle, Trash2,
   Download, Upload, Lock, Unlock, Merge, HardDrive, Check, X, Eye, EyeOff,
-  Settings2, ListTodo, ArrowRightLeft, Banknote
+  Settings2, ListTodo, ArrowRightLeft, Banknote, RotateCcw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatMoney } from '@/utils/money';
@@ -28,6 +28,7 @@ export default function Settings() {
   const refreshRecords = useGiftStore(state => state.refreshRecords);
   const preferences = useGiftStore(state => state.preferences);
   const updatePreferences = useGiftStore(state => state.updatePreferences);
+  const recycleBinCount = useGiftStore(state => state.recycleBinCount);
   
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
@@ -613,17 +614,31 @@ export default function Settings() {
         
         <div className="card p-6">
           <h2 className="text-lg font-semibold text-ink-800 mb-4">数据管理</h2>
-          <button
-            onClick={() => {
-              if (confirm('确定要加载示例数据吗？这将清除现有数据。')) {
-                loadMockData();
-                alert('示例数据已加载');
-              }
-            }}
-            className="w-full py-3 bg-cream-100 hover:bg-cream-200 text-ink-700 rounded-xl font-medium transition-colors"
-          >
-            加载示例数据
-          </button>
+          <div className="space-y-3">
+            <button
+              onClick={() => navigate('/recycle-bin')}
+              className="w-full py-3 bg-cream-100 hover:bg-cream-200 text-ink-700 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              <RotateCcw size={18} className="text-ink-500" />
+              <span>回收站</span>
+              {recycleBinCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-red-500 text-white text-xs font-medium">
+                  {recycleBinCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                if (confirm('确定要加载示例数据吗？这将清除现有数据。')) {
+                  loadMockData();
+                  alert('示例数据已加载');
+                }
+              }}
+              className="w-full py-3 bg-cream-100 hover:bg-cream-200 text-ink-700 rounded-xl font-medium transition-colors"
+            >
+              加载示例数据
+            </button>
+          </div>
         </div>
       </div>
       

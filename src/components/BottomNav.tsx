@@ -1,7 +1,8 @@
 import { NavLink } from 'react-router-dom';
-import { Home, BookOpen, Users, BarChart3, Plus, Calendar } from 'lucide-react';
+import { Home, BookOpen, Users, BarChart3, Plus, Calendar, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import LedgerSwitcher from './LedgerSwitcher';
+import { useGiftStore } from '@/store/useGiftStore';
 
 const navItems = [
   { path: '/', label: '首页', icon: Home },
@@ -13,17 +14,32 @@ const navItems = [
 
 export default function BottomNav() {
   const navigate = useNavigate();
+  const recycleBinCount = useGiftStore(state => state.recycleBinCount);
   
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-cream-200 z-50 pb-safe">
       <div className="flex items-center justify-between px-2 py-1 border-b border-cream-100">
         <LedgerSwitcher variant="bottom" />
-        <button
-          onClick={() => navigate('/settings')}
-          className="px-3 py-1.5 text-ink-400 hover:text-ink-600 transition-colors"
-        >
-          <span className="text-xs font-medium">设置</span>
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => navigate('/recycle-bin')}
+            className="relative px-3 py-1.5 text-ink-400 hover:text-ink-600 transition-colors flex items-center gap-1"
+          >
+            <Trash2 size={14} />
+            <span className="text-xs font-medium">回收站</span>
+            {recycleBinCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full bg-red-500 text-white text-[10px] font-medium flex items-center justify-center">
+                {recycleBinCount > 99 ? '99+' : recycleBinCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => navigate('/settings')}
+            className="px-3 py-1.5 text-ink-400 hover:text-ink-600 transition-colors"
+          >
+            <span className="text-xs font-medium">设置</span>
+          </button>
+        </div>
       </div>
       <div className="flex items-center justify-around h-14 px-2">
         {navItems.map((item) => {

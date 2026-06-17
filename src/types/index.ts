@@ -22,7 +22,10 @@ export interface GiftRecord {
   imageUrls: string[];
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string;
 }
+
+export const RECYCLE_BIN_DAYS = 30;
 
 export interface ContactSummary {
   name: string;

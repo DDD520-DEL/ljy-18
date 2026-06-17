@@ -374,9 +374,12 @@ export default function Records() {
       
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm animate-bounce-soft">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm animate-slide-up">
             <h3 className="text-lg font-semibold text-ink-800 mb-2">确认删除</h3>
-            <p className="text-ink-500 text-sm mb-6">删除后无法恢复，确定要删除这条记录吗？</p>
+            <p className="text-ink-500 text-sm mb-6">
+              删除的记录将移至回收站，保存 30 天后自动永久删除。
+              <br />期间可在回收站中恢复。
+            </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteConfirm(null)}
@@ -388,7 +391,7 @@ export default function Records() {
                 onClick={() => handleDelete(deleteConfirm)}
                 className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-colors"
               >
-                删除
+                移至回收站
               </button>
             </div>
           </div>

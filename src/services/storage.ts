@@ -1,6 +1,6 @@
 import type { GiftRecord, YearlyBudget, MergeRecord, MergeResult, Ledger, UserPreferences } from '@/types';
 import { generateId } from '@/utils/id';
-import { DEFAULT_PREFERENCES } from '@/types';
+import { DEFAULT_PREFERENCES, RECYCLE_BIN_DAYS } from '@/types';
 
 const LEDGERS_KEY = 'gift_ledger_ledgers';
 const CURRENT_LEDGER_KEY = 'gift_ledger_current';
@@ -10,6 +10,7 @@ const MAX_MERGE_HISTORY = 10;
 
 interface LedgerStorageData {
   records: GiftRecord[];
+  recycleBin: GiftRecord[];
   budgets: YearlyBudget[];
   mergeHistory: MergeRecord[];
   version: string;
@@ -52,12 +53,15 @@ function getLedgerData(ledgerId: string): LedgerStorageData {
     const raw = localStorage.getItem(getLedgerStorageKey(ledgerId));
     if (raw) {
       const data = JSON.parse(raw) as LedgerStorageData;
+      if (!data.recycleBin) {
+        data.recycleBin = [];
+      }
       return data;
     }
   } catch (e) {
     console.error('读取账本数据失败:', e);
   }
-  return { records: [], budgets: [], mergeHistory: [], version: STORAGE_VERSION };
+  return { records: [], recycleBin: [], budgets: [], mergeHistory: [], version: STORAGE_VERSION };
 }
 
 function saveLedgerData(ledgerId: string, data: LedgerStorageData): void {
@@ -114,6 +118,7 @@ export function createLedger(name: string, icon: string, color: string): Ledger 
   
   const emptyData: LedgerStorageData = {
     records: [],
+    recycleBin: [],
     budgets: [],
     mergeHistory: [],
     version: STORAGE_VERSION,
@@ -172,14 +177,15 @@ export function getActiveLedgerId(): string {
   return currentLedgerId;
 }
 
-function getStorageData(): { records: GiftRecord[]; version: string } {
+function getStorageData(): { records: GiftRecord[]; recycleBin: GiftRecord[]; version: string } {
   const data = getLedgerData(currentLedgerId);
-  return { records: data.records, version: data.version };
+  return { records: data.records, recycleBin: data.recycleBin, version: data.version };
 }
 
-function saveStorageData(data: { records: GiftRecord[]; version: string }): void {
+function saveStorageData(data: { records: GiftRecord[]; recycleBin: GiftRecord[]; version: string }): void {
   const ledgerData = getLedgerData(currentLedgerId);
   ledgerData.records = data.records;
+  ledgerData.recycleBin = data.recycleBin;
   ledgerData.version = data.version;
   saveLedgerData(currentLedgerId, ledgerData);
 }
@@ -228,9 +234,30 @@ export function deleteYearlyBudget(year: number): boolean {
   return true;
 }
 
+function isWithinRecycleBinPeriod(deletedAt: string): boolean {
+  const now = new Date();
+  const deleted = new Date(deletedAt);
+  const diffMs = now.getTime() - deleted.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  return diffDays <= RECYCLE_BIN_DAYS;
+}
+
+export function cleanExpiredRecycleBin(): number {
+  const data = getStorageData();
+  const initialLength = data.recycleBin.length;
+  data.recycleBin = data.recycleBin.filter(r => r.deletedAt && isWithinRecycleBinPeriod(r.deletedAt));
+  const removed = initialLength - data.recycleBin.length;
+  if (removed > 0) {
+    saveStorageData(data);
+  }
+  return removed;
+}
+
 export function getRecords(): GiftRecord[] {
+  cleanExpiredRecycleBin();
   const data = getStorageData();
   return data.records
+    .filter(r => !r.deletedAt)
     .map(r => ({ ...r, tags: r.tags || [], imageUrls: r.imageUrls || [] }))
     .sort((a, b) => 
       new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -276,11 +303,77 @@ export function updateRecord(id: string, updates: Partial<GiftRecord>): GiftReco
 
 export function deleteRecord(id: string): boolean {
   const data = getStorageData();
-  const initialLength = data.records.length;
-  data.records = data.records.filter(r => r.id !== id);
-  if (data.records.length === initialLength) return false;
+  const index = data.records.findIndex(r => r.id === id);
+  if (index === -1) return false;
+  
+  const record = data.records[index];
+  const deletedRecord: GiftRecord = {
+    ...record,
+    deletedAt: new Date().toISOString(),
+  };
+  
+  data.records.splice(index, 1);
+  data.recycleBin.unshift(deletedRecord);
+  
+  cleanExpiredRecycleBinInternal(data);
   saveStorageData(data);
   return true;
+}
+
+function cleanExpiredRecycleBinInternal(data: { records: GiftRecord[]; recycleBin: GiftRecord[]; version: string }): void {
+  data.recycleBin = data.recycleBin.filter(r => r.deletedAt && isWithinRecycleBinPeriod(r.deletedAt));
+}
+
+export function getRecycleBinRecords(): GiftRecord[] {
+  cleanExpiredRecycleBin();
+  const data = getStorageData();
+  return data.recycleBin
+    .map(r => ({ ...r, tags: r.tags || [], imageUrls: r.imageUrls || [] }))
+    .sort((a, b) => {
+      const timeA = a.deletedAt ? new Date(a.deletedAt).getTime() : 0;
+      const timeB = b.deletedAt ? new Date(b.deletedAt).getTime() : 0;
+      return timeB - timeA;
+    });
+}
+
+export function restoreRecord(id: string): boolean {
+  const data = getStorageData();
+  const index = data.recycleBin.findIndex(r => r.id === id);
+  if (index === -1) return false;
+  
+  const record = data.recycleBin[index];
+  const restoredRecord: GiftRecord = { ...record };
+  delete restoredRecord.deletedAt;
+  restoredRecord.updatedAt = new Date().toISOString();
+  
+  data.recycleBin.splice(index, 1);
+  data.records.push(restoredRecord);
+  
+  saveStorageData(data);
+  return true;
+}
+
+export function permanentlyDeleteRecord(id: string): boolean {
+  const data = getStorageData();
+  const initialLength = data.recycleBin.length;
+  data.recycleBin = data.recycleBin.filter(r => r.id !== id);
+  if (data.recycleBin.length === initialLength) return false;
+  saveStorageData(data);
+  return true;
+}
+
+export function clearAllRecycleBin(): number {
+  const data = getStorageData();
+  const count = data.recycleBin.length;
+  data.recycleBin = [];
+  saveStorageData(data);
+  return count;
+}
+
+export function getRecycleBinCount(): number {
+  cleanExpiredRecycleBin();
+  const data = getStorageData();
+  return data.recycleBin.length;
 }
 
 export function getRecordsByContact(contactName: string): GiftRecord[] {
@@ -308,7 +401,7 @@ export function importRecords(records: GiftRecord[]): void {
 }
 
 export function clearAllRecords(): void {
-  saveStorageData({ records: [], version: STORAGE_VERSION });
+  saveStorageData({ records: [], recycleBin: [], version: STORAGE_VERSION });
 }
 
 export function getMergeHistory(): MergeRecord[] {
@@ -466,6 +559,7 @@ export function migrateLegacyData(): void {
     
     const ledgerData: LedgerStorageData = {
       records: [],
+      recycleBin: [],
       budgets: [],
       mergeHistory: [],
       version: STORAGE_VERSION,
