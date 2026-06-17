@@ -48,7 +48,7 @@ app.post('/api/upload', upload.array('images', 9), (req, res) => {
     return res.status(400).json({ error: '请选择要上传的图片' });
   }
 
-  const urls = (req.files as Express.Multer.File[]).map(
+  const urls = req.files.map(
     (file) => `/uploads/${file.filename}`
   );
 
@@ -65,7 +65,7 @@ app.delete('/api/upload/:filename', (req, res) => {
   }
 });
 
-app.use((err: any, _req: any, res: any, _next: any) => {
+app.use((err, _req, res, _next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({ error: '文件大小不能超过10MB' });
