@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, Calendar, Download, Loader2, Target, AlertTriangle } from 'lucide-react';
 import { formatMoney, formatMoneyWithSign } from '@/utils/money';
-import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, type EventType } from '@/types';
+import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, DEFAULT_TAGS, TAG_CHART_COLORS, type EventType } from '@/types';
 import { exportStatisticsToExcel, formatExportDate, type ExportProgress } from '@/utils/export';
 import { useNavigate } from 'react-router-dom';
 
@@ -33,6 +33,12 @@ const TYPE_COLORS: Record<EventType, string> = {
   promotion: '#3B82F6',
   other: '#8B5CF6',
 };
+
+const TAG_FALLBACK_COLORS = [
+  '#EF4444', '#10B981', '#F59E0B', '#3B82F6', '#8B5CF6', '#06B6D4', '#EC4899', '#6B7280', '#14B8A6', '#F97316',
+];
+
+const UNTAGGED_COLOR = '#9CA3AF';
 
 export default function Statistics() {
   const navigate = useNavigate();
@@ -104,6 +110,40 @@ export default function Statistics() {
     .sort((a, b) => b.value - a.value);
   
   const totalExpenseByType = typeData.reduce((sum, item) => sum + item.value, 0);
+  
+  const tagData = useMemo(() => {
+    const expenseRecords = yearRecords.filter(r => r.direction === 'expense');
+    const tagMap = new Map<string, number>();
+    let untaggedTotal = 0;
+    
+    expenseRecords.forEach(record => {
+      const tags = record.tags || [];
+      if (tags.length === 0) {
+        untaggedTotal += record.amount;
+      } else {
+        tags.forEach(tag => {
+          tagMap.set(tag, (tagMap.get(tag) || 0) + record.amount);
+        });
+      }
+    });
+    
+    const items = Array.from(tagMap.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+    
+    if (untaggedTotal > 0) {
+      items.push({ name: '未标记', value: untaggedTotal });
+    }
+    
+    return items;
+  }, [yearRecords]);
+  
+  const totalExpenseByTag = tagData.reduce((sum, item) => sum + item.value, 0);
+  
+  const getTagChartColor = (tag: string, index: number) => {
+    if (tag === '未标记') return UNTAGGED_COLOR;
+    return TAG_CHART_COLORS[tag] || TAG_FALLBACK_COLORS[index % TAG_FALLBACK_COLORS.length];
+  };
   
   return (
     <div className="space-y-6">
@@ -420,6 +460,79 @@ export default function Statistics() {
         </div>
         
         <div className="card p-5">
+          <h3 className="font-semibold text-ink-800 mb-4 flex items-center gap-2">
+            <span className="text-lg">🏷️</span>
+            标签支出分布
+          </h3>
+          {tagData.length > 0 ? (
+            <>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={tagData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {tagData.map((entry, index) => (
+                        <Cell 
+                          key={`tag-cell-${index}`} 
+                          fill={getTagChartColor(entry.name, index)} 
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#fff',
+                        border: '1px solid #E8D5B7',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 20px -2px rgba(196, 30, 58, 0.1)',
+                      }}
+                      formatter={(value: number) => [formatMoney(value), '金额']}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              
+              <div className="space-y-2 mt-4">
+                {tagData.map((item, index) => {
+                  const percent = totalExpenseByTag > 0 ? ((item.value / totalExpenseByTag) * 100).toFixed(1) : '0';
+                  return (
+                    <div key={index} className="flex items-center gap-3">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: getTagChartColor(item.name, index) }}
+                      />
+                      <span className="text-sm text-ink-600 flex-1">
+                        {item.name === '未标记' ? '⚪ 未标记' : <span className="px-1.5 py-0.5 rounded-full text-[10px] mr-1" style={{ backgroundColor: getTagChartColor(item.name, index) + '22', color: getTagChartColor(item.name, index) }}>{item.name}</span>}
+                      </span>
+                      <span className="text-sm font-medium text-ink-800 tabular-nums">
+                        {formatMoney(item.value)}
+                      </span>
+                      <span className="text-xs text-ink-400 w-12 text-right">
+                        {percent}%
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-ink-400 mt-3">
+                提示：一笔记录含多个标签时，金额会分别计入各标签维度。
+              </p>
+            </>
+          ) : (
+            <div className="text-center py-12 text-ink-300">
+              <p className="text-4xl mb-2">🏷️</p>
+              <p>暂无支出数据</p>
+            </div>
+          )}
+        </div>
+        
+        <div className="card p-5 md:col-span-2">
           <h3 className="font-semibold text-ink-800 mb-4 flex items-center gap-2">
             <span className="text-lg">📈</span>
             年度概览

@@ -228,9 +228,11 @@ export function deleteYearlyBudget(year: number): boolean {
 
 export function getRecords(): GiftRecord[] {
   const data = getStorageData();
-  return data.records.sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
+  return data.records
+    .map(r => ({ ...r, tags: r.tags || [] }))
+    .sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
 }
 
 export function getRecordById(id: string): GiftRecord | undefined {
@@ -243,6 +245,7 @@ export function addRecord(record: Omit<GiftRecord, 'id' | 'createdAt' | 'updated
   const now = new Date().toISOString();
   const newRecord: GiftRecord = {
     ...record,
+    tags: record.tags || [],
     id: generateId(),
     createdAt: now,
     updatedAt: now,

@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useGiftStore } from '@/store/useGiftStore';
-import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, type EventType, type Direction } from '@/types';
+import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, DEFAULT_TAGS, TAG_COLORS, type EventType, type Direction } from '@/types';
 import { getTodayStr, formatDate } from '@/utils/date';
 import { formatMoney } from '@/utils/money';
-import { ArrowLeft, Save, Lightbulb, Gift, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, Lightbulb, Gift, AlertCircle, Tag, Plus, X } from 'lucide-react';
 
 export default function RecordForm() {
   const navigate = useNavigate();
@@ -27,6 +27,8 @@ export default function RecordForm() {
   const [direction, setDirection] = useState<Direction>('expense');
   const [date, setDate] = useState(dateFromUrl || getTodayStr());
   const [note, setNote] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+  const [customTagInput, setCustomTagInput] = useState('');
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [showBudgetWarning, setShowBudgetWarning] = useState(false);
   
@@ -58,6 +60,7 @@ export default function RecordForm() {
         setDirection(record.direction);
         setDate(record.date);
         setNote(record.note);
+        setTags(record.tags || []);
       } else {
         navigate('/records');
       }
@@ -94,6 +97,7 @@ export default function RecordForm() {
       direction,
       date,
       note: note.trim(),
+      tags,
     };
     
     if (isEdit && id) {
@@ -117,6 +121,26 @@ export default function RecordForm() {
     if (suggestion) {
       setAmount(suggestion.suggestedAmount.toString());
     }
+  };
+  
+  const toggleTag = (tag: string) => {
+    setTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag) 
+        : [...prev, tag]
+    );
+  };
+  
+  const addCustomTag = () => {
+    const tag = customTagInput.trim();
+    if (tag && !tags.includes(tag)) {
+      setTags(prev => [...prev, tag]);
+    }
+    setCustomTagInput('');
+  };
+  
+  const removeTag = (tag: string) => {
+    setTags(prev => prev.filter(t => t !== tag));
   };
   
   return (
@@ -398,6 +422,80 @@ export default function RecordForm() {
             rows={3}
             className="w-full px-4 py-3 bg-cream-50 border border-cream-200 rounded-xl text-ink-800 placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all resize-none"
           />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-ink-700 mb-2">
+            <span className="flex items-center gap-1.5">
+              <Tag size={16} />
+              标签
+            </span>
+          </label>
+          
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {tags.map(tag => (
+                <span
+                  key={tag}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${TAG_COLORS[tag] || 'bg-primary-100 text-primary-600'}`}
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="hover:bg-black/10 rounded-full p-0.5 transition-colors"
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          
+          <div className="flex flex-wrap gap-2">
+            {DEFAULT_TAGS.map(tag => {
+              const selected = tags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    selected
+                      ? TAG_COLORS[tag] || 'bg-primary-500 text-white'
+                      : 'bg-cream-100 text-ink-500 hover:bg-cream-200'
+                  }`}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>
+          
+          <div className="flex gap-2 mt-3">
+            <input
+              type="text"
+              value={customTagInput}
+              onChange={(e) => setCustomTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addCustomTag();
+                }
+              }}
+              placeholder="自定义标签..."
+              className="flex-1 px-3 py-2 bg-cream-50 border border-cream-200 rounded-lg text-sm text-ink-800 placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+            />
+            <button
+              type="button"
+              onClick={addCustomTag}
+              disabled={!customTagInput.trim()}
+              className="px-3 py-2 bg-primary-50 hover:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed text-primary-600 rounded-lg transition-all flex items-center gap-1"
+            >
+              <Plus size={16} />
+              <span className="text-sm">添加</span>
+            </button>
+          </div>
         </div>
         
         <button

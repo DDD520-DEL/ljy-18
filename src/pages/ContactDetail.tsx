@@ -1,17 +1,51 @@
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGiftStore } from '@/store/useGiftStore';
 import RecordItem from '@/components/RecordItem';
-import { ArrowLeft, TrendingUp, TrendingDown, Wallet, Gift } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Wallet, Gift, Tag, X } from 'lucide-react';
 import { formatMoney } from '@/utils/money';
 import { formatDate } from '@/utils/date';
+import { DEFAULT_TAGS, TAG_COLORS } from '@/types';
 
 export default function ContactDetail() {
   const { name } = useParams();
   const navigate = useNavigate();
   const getContactDetail = useGiftStore(state => state.getContactDetail);
   
+  const [filterTags, setFilterTags] = useState<string[]>([]);
+  
   const contactName = name ? decodeURIComponent(name) : '';
   const contact = getContactDetail(contactName);
+  
+  const availableTags = useMemo(() => {
+    if (!contact) return [];
+    const tagSet = new Set<string>(DEFAULT_TAGS);
+    contact.records.forEach(r => {
+      (r.tags || []).forEach(t => tagSet.add(t));
+    });
+    return Array.from(tagSet).filter(t => 
+      contact.records.some(r => (r.tags || []).includes(t))
+    );
+  }, [contact]);
+  
+  const filteredRecords = useMemo(() => {
+    if (!contact) return [];
+    if (filterTags.length === 0) return contact.records;
+    return contact.records.filter(r => {
+      const recordTags = r.tags || [];
+      return filterTags.every(t => recordTags.includes(t));
+    });
+  }, [contact, filterTags]);
+  
+  const toggleFilterTag = (tag: string) => {
+    setFilterTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag) 
+        : [...prev, tag]
+    );
+  };
+  
+  const clearFilterTags = () => setFilterTags([]);
   
   if (!contact) {
     return (
@@ -157,18 +191,71 @@ export default function ContactDetail() {
       </div>
       
       <div className="card p-5">
-        <h3 className="font-semibold text-ink-800 mb-4 flex items-center gap-2">
-          <span className="text-lg">📋</span>
-          往来记录
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-ink-800 flex items-center gap-2">
+            <span className="text-lg">📋</span>
+            往来记录
+          </h3>
+          {filterTags.length > 0 && (
+            <span className="text-xs text-ink-400">
+              显示 {filteredRecords.length}/{contact.records.length} 条
+            </span>
+          )}
+        </div>
+        
+        {availableTags.length > 0 && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-ink-500 flex items-center gap-1">
+                <Tag size={12} />
+                按标签筛选
+              </span>
+              {filterTags.length > 0 && (
+                <button
+                  onClick={clearFilterTags}
+                  className="text-xs text-ink-400 hover:text-primary-500 flex items-center gap-1"
+                >
+                  <X size={12} />
+                  清除
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {availableTags.map(tag => {
+                const selected = filterTags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => toggleFilterTag(tag)}
+                    className={`px-2.5 py-1 rounded-lg text-xs transition-all ${
+                      selected
+                        ? TAG_COLORS[tag] || 'bg-primary-500 text-white'
+                        : 'bg-cream-100 text-ink-600 hover:bg-cream-200'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        
         <div className="space-y-3">
-          {contact.records.map((record) => (
-            <RecordItem
-              key={record.id}
-              record={record}
-              onClick={() => navigate(`/records/${record.id}/edit`)}
-            />
-          ))}
+          {filteredRecords.length > 0 ? (
+            filteredRecords.map((record) => (
+              <RecordItem
+                key={record.id}
+                record={record}
+                onClick={() => navigate(`/records/${record.id}/edit`)}
+              />
+            ))
+          ) : (
+            <div className="text-center py-8 text-ink-300">
+              <p className="text-3xl mb-2">🔍</p>
+              <p className="text-sm">没有匹配所选标签的记录</p>
+            </div>
+          )}
         </div>
       </div>
       

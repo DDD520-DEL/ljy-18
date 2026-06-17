@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useGiftStore } from '@/store/useGiftStore';
 import { 
   Search, ArrowUpDown, ChevronRight, TrendingUp, TrendingDown, Minus, 
-  Users, X, Check, Merge, Undo2, AlertCircle, CheckCircle2 
+  Users, X, Check, Merge, Undo2, AlertCircle, CheckCircle2, Tag 
 } from 'lucide-react';
 import { formatMoney } from '@/utils/money';
 import { formatDateShort } from '@/utils/date';
-import type { ContactSummary, MergeResult } from '@/types';
+import { DEFAULT_TAGS, TAG_COLORS, type ContactSummary, type MergeResult } from '@/types';
 
 interface ToastState {
   id: number;
@@ -24,6 +24,8 @@ export default function Contacts() {
   
   const [searchText, setSearchText] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'expense' | 'income' | 'balance'>('date');
+  const [filterTags, setFilterTags] = useState<string[]>([]);
+  const [showTagFilter, setShowTagFilter] = useState(false);
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [showMergeModal, setShowMergeModal] = useState(false);
@@ -32,12 +34,32 @@ export default function Contacts() {
   
   const contacts = getContactSummaryList();
   
+  const availableTags = useMemo(() => {
+    const tagSet = new Set<string>(DEFAULT_TAGS);
+    contacts.forEach(c => {
+      c.records.forEach(r => {
+        (r.tags || []).forEach(t => tagSet.add(t));
+      });
+    });
+    return Array.from(tagSet);
+  }, [contacts]);
+  
   const filteredContacts = useMemo(() => {
     let result = [...contacts];
     
     if (searchText) {
       const text = searchText.toLowerCase();
       result = result.filter(c => c.name.toLowerCase().includes(text));
+    }
+    
+    if (filterTags.length > 0) {
+      result = result.filter(c => {
+        const contactTags = new Set<string>();
+        c.records.forEach(r => {
+          (r.tags || []).forEach(t => contactTags.add(t));
+        });
+        return filterTags.every(t => contactTags.has(t));
+      });
     }
     
     switch (sortBy) {
@@ -58,7 +80,7 @@ export default function Contacts() {
     }
     
     return result;
-  }, [contacts, searchText, sortBy]);
+  }, [contacts, searchText, filterTags, sortBy]);
 
   const selectedContactList = useMemo(() => {
     return filteredContacts.filter(c => selectedContacts.has(c.name));
@@ -121,6 +143,16 @@ export default function Contacts() {
     };
     return labels[sortBy];
   };
+
+  const toggleFilterTag = (tag: string) => {
+    setFilterTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag) 
+        : [...prev, tag]
+    );
+  };
+  
+  const clearFilterTags = () => setFilterTags([]);
 
   const toggleContactSelection = (name: string) => {
     setSelectedContacts(prev => {
@@ -272,6 +304,22 @@ export default function Contacts() {
           />
         </div>
         <button
+          onClick={() => setShowTagFilter(!showTagFilter)}
+          className={`px-4 py-2.5 rounded-xl border transition-all flex items-center gap-2 text-sm ${
+            showTagFilter || filterTags.length > 0
+              ? 'bg-primary-50 border-primary-200 text-primary-600'
+              : 'bg-white border-cream-200 text-ink-500 hover:bg-cream-50'
+          }`}
+        >
+          <Tag size={16} />
+          <span className="hidden md:inline">标签</span>
+          {filterTags.length > 0 && (
+            <span className="bg-primary-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+              {filterTags.length}
+            </span>
+          )}
+        </button>
+        <button
           onClick={handleSort}
           className="px-4 py-2.5 bg-white border border-cream-200 rounded-xl text-ink-500 hover:bg-cream-50 transition-all flex items-center gap-2 text-sm"
         >
@@ -279,6 +327,51 @@ export default function Contacts() {
           {getSortLabel()}
         </button>
       </div>
+      
+      {showTagFilter && (
+        <div className="bg-white rounded-xl p-4 shadow-sm animate-slide-up">
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-sm font-medium text-ink-600 flex items-center gap-1.5">
+              <Tag size={14} />
+              按标签筛选联系人
+            </label>
+            {filterTags.length > 0 && (
+              <button
+                onClick={clearFilterTags}
+                className="text-xs text-ink-400 hover:text-primary-500 flex items-center gap-1"
+              >
+                <X size={12} />
+                清除
+              </button>
+            )}
+          </div>
+          {availableTags.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {availableTags.map(tag => {
+                const selected = filterTags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => toggleFilterTag(tag)}
+                    className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
+                      selected
+                        ? TAG_COLORS[tag] || 'bg-primary-500 text-white'
+                        : 'bg-cream-100 text-ink-600 hover:bg-cream-200'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-ink-400">暂无可用标签</p>
+          )}
+          {filterTags.length > 0 && (
+            <p className="text-xs text-ink-400 mt-3">已选 {filterTags.length} 个标签（联系人含任意已选标签的记录均显示，需同时满足）</p>
+          )}
+        </div>
+      )}
       
       <div className="space-y-3">
         {filteredContacts.length > 0 ? (
@@ -358,6 +451,14 @@ function ContactCard({
   const expensePercent = (contact.totalExpense / maxAmount) * 100;
   const incomePercent = (contact.totalIncome / maxAmount) * 100;
   
+  const contactTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    contact.records.forEach(r => {
+      (r.tags || []).forEach(t => tagSet.add(t));
+    });
+    return Array.from(tagSet).slice(0, 4);
+  }, [contact.records]);
+  
   return (
     <div
       onClick={onClick}
@@ -400,6 +501,19 @@ function ContactCard({
           <p className="text-xs text-ink-400 mt-0.5">
             共 {contact.recordCount} 次往来 · 最近 {formatDateShort(contact.lastRecordDate)}
           </p>
+          
+          {contactTags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {contactTags.map(tag => (
+                <span
+                  key={tag}
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full ${TAG_COLORS[tag] || 'bg-primary-100 text-primary-600'}`}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
           
           <div className="mt-3 space-y-2">
             <div className="flex items-center gap-2">

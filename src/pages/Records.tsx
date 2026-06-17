@@ -2,8 +2,8 @@ import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGiftStore } from '@/store/useGiftStore';
 import RecordItem from '@/components/RecordItem';
-import { Search, Filter, Plus, ArrowUpDown, Trash2, Download, Loader2 } from 'lucide-react';
-import { EVENT_TYPE_LABELS, type EventType, type Direction } from '@/types';
+import { Search, Filter, Plus, ArrowUpDown, Trash2, Download, Loader2, Tag, X } from 'lucide-react';
+import { EVENT_TYPE_LABELS, DEFAULT_TAGS, TAG_COLORS, type EventType, type Direction } from '@/types';
 import { formatMoney } from '@/utils/money';
 import { exportRecordsToExcel, formatExportDate, type ExportProgress } from '@/utils/export';
 
@@ -15,10 +15,19 @@ export default function Records() {
   const [searchText, setSearchText] = useState('');
   const [filterType, setFilterType] = useState<EventType | 'all'>('all');
   const [filterDirection, setFilterDirection] = useState<Direction | 'all'>('all');
+  const [filterTags, setFilterTags] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc'>('date-desc');
   const [showFilter, setShowFilter] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
+  
+  const availableTags = useMemo(() => {
+    const tagSet = new Set<string>(DEFAULT_TAGS);
+    records.forEach(r => {
+      (r.tags || []).forEach(t => tagSet.add(t));
+    });
+    return Array.from(tagSet);
+  }, [records]);
   
   const filteredRecords = useMemo(() => {
     let result = [...records];
@@ -40,6 +49,13 @@ export default function Records() {
       result = result.filter(r => r.direction === filterDirection);
     }
     
+    if (filterTags.length > 0) {
+      result = result.filter(r => {
+        const recordTags = r.tags || [];
+        return filterTags.every(t => recordTags.includes(t));
+      });
+    }
+    
     switch (sortOrder) {
       case 'date-desc':
         result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -56,7 +72,7 @@ export default function Records() {
     }
     
     return result;
-  }, [records, searchText, filterType, filterDirection, sortOrder]);
+  }, [records, searchText, filterType, filterDirection, filterTags, sortOrder]);
   
   const totalExpense = filteredRecords
     .filter(r => r.direction === 'expense')
@@ -70,6 +86,16 @@ export default function Records() {
     deleteRecord(id);
     setDeleteConfirm(null);
   };
+  
+  const toggleFilterTag = (tag: string) => {
+    setFilterTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag) 
+        : [...prev, tag]
+    );
+  };
+  
+  const clearFilterTags = () => setFilterTags([]);
   
   const handleExport = useCallback(async () => {
     if (exportProgress) return;
@@ -158,13 +184,18 @@ export default function Records() {
         <button
           onClick={() => setShowFilter(!showFilter)}
           className={`px-4 py-2.5 rounded-xl border transition-all flex items-center gap-2 ${
-            showFilter || filterType !== 'all' || filterDirection !== 'all'
+            showFilter || filterType !== 'all' || filterDirection !== 'all' || filterTags.length > 0
               ? 'bg-primary-50 border-primary-200 text-primary-600'
               : 'bg-white border-cream-200 text-ink-500'
           }`}
         >
           <Filter size={18} />
           <span className="hidden md:inline">筛选</span>
+          {filterTags.length > 0 && (
+            <span className="bg-primary-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+              {filterTags.length}
+            </span>
+          )}
         </button>
         <button
           onClick={() => {
@@ -260,6 +291,49 @@ export default function Records() {
                   收入
                 </button>
               </div>
+            </div>
+            
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-ink-600 flex items-center gap-1.5">
+                  <Tag size={14} />
+                  标签筛选
+                </label>
+                {filterTags.length > 0 && (
+                  <button
+                    onClick={clearFilterTags}
+                    className="text-xs text-ink-400 hover:text-primary-500 flex items-center gap-1"
+                  >
+                    <X size={12} />
+                    清除
+                  </button>
+                )}
+              </div>
+              {availableTags.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {availableTags.map(tag => {
+                    const selected = filterTags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        onClick={() => toggleFilterTag(tag)}
+                        className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
+                          selected
+                            ? TAG_COLORS[tag] || 'bg-primary-500 text-white'
+                            : 'bg-cream-100 text-ink-600 hover:bg-cream-200'
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-ink-400">暂无可用标签</p>
+              )}
+              {filterTags.length > 0 && (
+                <p className="text-xs text-ink-400 mt-2">已选 {filterTags.length} 个标签（同时满足）</p>
+              )}
             </div>
           </div>
         </div>

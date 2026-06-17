@@ -1,5 +1,5 @@
 import type { GiftRecord } from '@/types';
-import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, EVENT_TYPE_COLORS } from '@/types';
+import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, EVENT_TYPE_COLORS, TAG_COLORS } from '@/types';
 import { formatDateShort, getRelativeDate } from '@/utils/date';
 import { formatMoney } from '@/utils/money';
 import { ArrowUpRight, ArrowDownLeft } from 'lucide-react';
@@ -12,6 +12,7 @@ interface RecordItemProps {
 
 export default function RecordItem({ record, onClick, showDate = true }: RecordItemProps) {
   const isExpense = record.direction === 'expense';
+  const tags = record.tags || [];
   
   return (
     <div 
@@ -30,6 +31,18 @@ export default function RecordItem({ record, onClick, showDate = true }: RecordI
           </span>
         </div>
         <p className="text-sm text-ink-400 mt-0.5 truncate">{record.eventName}</p>
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {tags.map(tag => (
+              <span
+                key={tag}
+                className={`text-[10px] px-1.5 py-0.5 rounded-full ${TAG_COLORS[tag] || 'bg-primary-100 text-primary-600'}`}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
         {showDate && (
           <p className="text-xs text-ink-300 mt-1">
             {formatDateShort(record.date)} · {getRelativeDate(record.date)}

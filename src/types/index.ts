@@ -18,6 +18,7 @@ export interface GiftRecord {
   direction: Direction;
   date: string;
   note: string;
+  tags: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -156,3 +157,27 @@ export const LEDGER_COLORS = [
 ];
 
 export const LEDGER_ICONS = ['🧧', '👨‍👩‍👧', '💼', '🎂', '🎉', '📚'];
+
+export const DEFAULT_TAGS = ['重要', '已回礼', '待回礼', '关系密切', '普通往来', '长辈', '同事', '亲友'];
+
+export const TAG_COLORS: Record<string, string> = {
+  '重要': 'bg-red-100 text-red-600',
+  '已回礼': 'bg-emerald-100 text-emerald-600',
+  '待回礼': 'bg-amber-100 text-amber-600',
+  '关系密切': 'bg-blue-100 text-blue-600',
+  '普通往来': 'bg-gray-100 text-gray-600',
+  '长辈': 'bg-purple-100 text-purple-600',
+  '同事': 'bg-cyan-100 text-cyan-600',
+  '亲友': 'bg-pink-100 text-pink-600',
+};
+
+export const TAG_CHART_COLORS: Record<string, string> = {
+  '重要': '#EF4444',
+  '已回礼': '#10B981',
+  '待回礼': '#F59E0B',
+  '关系密切': '#3B82F6',
+  '普通往来': '#6B7280',
+  '长辈': '#8B5CF6',
+  '同事': '#06B6D4',
+  '亲友': '#EC4899',
+};
