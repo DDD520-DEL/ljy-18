@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, YearlyBudget, BudgetProgress, ReturnGiftReminder, MergeResult, MergeRecord, Ledger } from '@/types';
+import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, YearlyBudget, BudgetProgress, ReturnGiftReminder, MergeResult, MergeRecord, Ledger, RelationNetworkData } from '@/types';
 import { 
   getRecords, 
   addRecord as storageAddRecord, 
@@ -35,6 +35,9 @@ import {
   getBudgetProgress,
   checkMonthlyBudgetAfterExpense,
   getReturnGiftReminders,
+  getRelationNetworkData,
+  getYearlyRelationNetworkData,
+  getAllTimeRelationNetworkData,
 } from '@/services/statistics';
 import { mockRecords } from '@/data/mockData';
 import {
@@ -114,6 +117,10 @@ interface GiftStore {
   };
   
   getReturnGiftReminders: () => ReturnGiftReminder[];
+  
+  getRelationNetworkData: () => RelationNetworkData;
+  getYearlyRelationNetworkData: (year: number) => RelationNetworkData;
+  getAllTimeRelationNetworkData: () => RelationNetworkData;
   
   mergeContacts: (sourceContactNames: string[], targetContactName: string) => MergeResult;
   undoLastMerge: () => MergeResult;
@@ -246,6 +253,17 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
   
   getReturnGiftReminders: () => {
     return getReturnGiftReminders();
+  },
+  
+  getRelationNetworkData: () => {
+    const { records } = get();
+    return getRelationNetworkData(records);
+  },
+  getYearlyRelationNetworkData: (year) => {
+    return getYearlyRelationNetworkData(year);
+  },
+  getAllTimeRelationNetworkData: () => {
+    return getAllTimeRelationNetworkData();
   },
   
   mergeContacts: (sourceContactNames, targetContactName) => {

@@ -182,3 +182,35 @@ export const TAG_CHART_COLORS: Record<string, string> = {
   '同事': '#06B6D4',
   '亲友': '#EC4899',
 };
+
+export interface NetworkNode {
+  id: string;
+  name: string;
+  totalAmount: number;
+  totalExpense: number;
+  totalIncome: number;
+  recordCount: number;
+  isSelf: boolean;
+}
+
+export interface NetworkLink {
+  source: string;
+  target: string;
+  frequency: number;
+  totalAmount: number;
+  direction: 'both' | 'expense' | 'income';
+  expenseAmount: number;
+  incomeAmount: number;
+  expenseCount: number;
+  incomeCount: number;
+}
+
+export interface RelationNetworkData {
+  nodes: NetworkNode[];
+  links: NetworkLink[];
+  summary: {
+    totalContacts: number;
+    totalRecords: number;
+    totalAmount: number;
+  };
+}

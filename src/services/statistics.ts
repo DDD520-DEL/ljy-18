@@ -1,4 +1,4 @@
-import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, EventType, BudgetProgress, ReturnGiftReminder, ReminderType } from '@/types';
+import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, EventType, BudgetProgress, ReturnGiftReminder, ReminderType, RelationNetworkData, NetworkNode, NetworkLink } from '@/types';
 import { getRecords, getRecordsByContact, getRecordsByYear, getAvailableYears, getYearlyBudget } from './storage';
 import { formatDate } from '@/utils/date';
 
@@ -344,4 +344,133 @@ export function getReturnGiftReminders(): ReturnGiftReminder[] {
     
     return a.daysUntilDeadline - b.daysUntilDeadline;
   });
+}
+
+const SELF_NODE_ID = 'self';
+const SELF_NODE_NAME = '我';
+
+export function getRelationNetworkData(records: GiftRecord[]): RelationNetworkData {
+  const contactMap = new Map<string, {
+    totalExpense: number;
+    totalIncome: number;
+    recordCount: number;
+    expenseCount: number;
+    incomeCount: number;
+  }>();
+
+  let totalRecords = 0;
+  let totalAmount = 0;
+
+  records.forEach(record => {
+    totalRecords++;
+    totalAmount += record.amount;
+
+    if (!contactMap.has(record.contactName)) {
+      contactMap.set(record.contactName, {
+        totalExpense: 0,
+        totalIncome: 0,
+        recordCount: 0,
+        expenseCount: 0,
+        incomeCount: 0,
+      });
+    }
+
+    const contact = contactMap.get(record.contactName)!;
+    contact.recordCount++;
+
+    if (record.direction === 'expense') {
+      contact.totalExpense += record.amount;
+      contact.expenseCount++;
+    } else {
+      contact.totalIncome += record.amount;
+      contact.incomeCount++;
+    }
+  });
+
+  const nodes: NetworkNode[] = [];
+  const links: NetworkLink[] = [];
+
+  let selfTotalExpense = 0;
+  let selfTotalIncome = 0;
+  let selfRecordCount = 0;
+
+  contactMap.forEach((data, name) => {
+    selfTotalExpense += data.totalExpense;
+    selfTotalIncome += data.totalIncome;
+    selfRecordCount += data.recordCount;
+
+    const totalAmountForContact = data.totalExpense + data.totalIncome;
+
+    nodes.push({
+      id: `contact-${name}`,
+      name,
+      totalAmount: totalAmountForContact,
+      totalExpense: data.totalExpense,
+      totalIncome: data.totalIncome,
+      recordCount: data.recordCount,
+      isSelf: false,
+    });
+
+    let direction: 'both' | 'expense' | 'income';
+    if (data.expenseCount > 0 && data.incomeCount > 0) {
+      direction = 'both';
+    } else if (data.expenseCount > 0) {
+      direction = 'expense';
+    } else {
+      direction = 'income';
+    }
+
+    let linkSource: string;
+    let linkTarget: string;
+
+    if (direction === 'income') {
+      linkSource = `contact-${name}`;
+      linkTarget = SELF_NODE_ID;
+    } else {
+      linkSource = SELF_NODE_ID;
+      linkTarget = `contact-${name}`;
+    }
+
+    links.push({
+      source: linkSource,
+      target: linkTarget,
+      frequency: data.recordCount,
+      totalAmount: totalAmountForContact,
+      direction,
+      expenseAmount: data.totalExpense,
+      incomeAmount: data.totalIncome,
+      expenseCount: data.expenseCount,
+      incomeCount: data.incomeCount,
+    });
+  });
+
+  nodes.unshift({
+    id: SELF_NODE_ID,
+    name: SELF_NODE_NAME,
+    totalAmount: selfTotalExpense + selfTotalIncome,
+    totalExpense: selfTotalExpense,
+    totalIncome: selfTotalIncome,
+    recordCount: selfRecordCount,
+    isSelf: true,
+  });
+
+  return {
+    nodes,
+    links,
+    summary: {
+      totalContacts: contactMap.size,
+      totalRecords,
+      totalAmount,
+    },
+  };
+}
+
+export function getYearlyRelationNetworkData(year: number): RelationNetworkData {
+  const records = getRecordsByYear(year);
+  return getRelationNetworkData(records);
+}
+
+export function getAllTimeRelationNetworkData(): RelationNetworkData {
+  const records = getRecords();
+  return getRelationNetworkData(records);
 }

@@ -13,11 +13,12 @@ import {
   Cell,
   Legend
 } from 'recharts';
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, Calendar, Download, Loader2, Target, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, Calendar, Download, Loader2, Target, AlertTriangle, Network, BarChart3 } from 'lucide-react';
 import { formatMoney, formatMoneyWithSign } from '@/utils/money';
-import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, DEFAULT_TAGS, TAG_CHART_COLORS, type EventType } from '@/types';
+import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, TAG_CHART_COLORS, type EventType } from '@/types';
 import { exportStatisticsToExcel, formatExportDate, type ExportProgress } from '@/utils/export';
 import { useNavigate } from 'react-router-dom';
+import RelationNetworkGraph from '@/components/RelationNetworkGraph';
 
 const CHART_COLORS = {
   expense: '#C41E3A',
@@ -40,12 +41,17 @@ const TAG_FALLBACK_COLORS = [
 
 const UNTAGGED_COLOR = '#9CA3AF';
 
+type TabType = 'overview' | 'network';
+type NetworkRange = 'all' | 'yearly';
+
 export default function Statistics() {
   const navigate = useNavigate();
   const records = useGiftStore(state => state.records);
   const getAvailableYears = useGiftStore(state => state.getAvailableYears);
   const getYearlyStats = useGiftStore(state => state.getYearlyStats);
   const getBudgetProgress = useGiftStore(state => state.getBudgetProgress);
+  const getYearlyRelationNetworkData = useGiftStore(state => state.getYearlyRelationNetworkData);
+  const getAllTimeRelationNetworkData = useGiftStore(state => state.getAllTimeRelationNetworkData);
   
   const availableYears = getAvailableYears();
   const currentYear = new Date().getFullYear();
@@ -53,9 +59,17 @@ export default function Statistics() {
     availableYears.includes(currentYear) ? currentYear : (availableYears[0] || currentYear)
   );
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [networkRange, setNetworkRange] = useState<NetworkRange>('all');
   
   const stats = getYearlyStats(selectedYear);
   const budgetProgress = getBudgetProgress(selectedYear);
+  const networkData = useMemo(() => {
+    if (networkRange === 'yearly') {
+      return getYearlyRelationNetworkData(selectedYear);
+    }
+    return getAllTimeRelationNetworkData();
+  }, [networkRange, selectedYear, getYearlyRelationNetworkData, getAllTimeRelationNetworkData]);
   
   const yearRecords = useMemo(() => {
     return records.filter(r => {
@@ -145,8 +159,8 @@ export default function Statistics() {
     return TAG_CHART_COLORS[tag] || TAG_FALLBACK_COLORS[index % TAG_FALLBACK_COLORS.length];
   };
   
-  return (
-    <div className="space-y-6">
+  const renderOverviewTab = () => (
+    <>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-serif font-bold text-ink-800">
           年度统计
@@ -590,6 +604,96 @@ export default function Statistics() {
           </div>
         </div>
       </div>
+    </>
+  );
+
+  const renderNetworkTab = () => (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h1 className="text-2xl font-serif font-bold text-ink-800 flex items-center gap-2">
+          <Network className="text-primary-500" size={28} />
+          人情关系网络
+        </h1>
+        <div className="flex items-center gap-2 bg-white rounded-xl shadow-sm p-1 border border-ink-100">
+          <button
+            onClick={() => setNetworkRange('all')}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              networkRange === 'all'
+                ? 'bg-primary-500 text-white shadow-sm'
+                : 'text-ink-600 hover:text-primary-600'
+            }`}
+          >
+            全部记录
+          </button>
+          <button
+            onClick={() => setNetworkRange('yearly')}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              networkRange === 'yearly'
+                ? 'bg-primary-500 text-white shadow-sm'
+                : 'text-ink-600 hover:text-primary-600'
+            }`}
+          >
+            {selectedYear}年度
+          </button>
+        </div>
+      </div>
+
+      {networkRange === 'yearly' && availableYears.length > 1 && (
+        <div className="flex items-center justify-center gap-4 py-1">
+          <button
+            onClick={goToPrevYear}
+            disabled={currentYearIndex >= availableYears.length - 1}
+            className="p-2 bg-white rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft size={20} className="text-ink-600" />
+          </button>
+          
+          <div className="flex items-center gap-2 px-6 py-2 bg-white rounded-xl shadow-sm">
+            <Calendar size={20} className="text-primary-500" />
+            <span className="text-xl font-bold text-ink-800">{selectedYear}年</span>
+          </div>
+          
+          <button
+            onClick={goToNextYear}
+            disabled={currentYearIndex <= 0}
+            className="p-2 bg-white rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronRight size={20} className="text-ink-600" />
+          </button>
+        </div>
+      )}
+
+      <div style={{ height: 'calc(100vh - 280px)', minHeight: 520 }}>
+        <RelationNetworkGraph data={networkData} />
+      </div>
+    </div>
+  );
+
+  const tabs = [
+    { id: 'overview' as TabType, label: '年度统计', icon: BarChart3 },
+    { id: 'network' as TabType, label: '关系网络', icon: Network },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-ink-100 p-1.5 inline-flex gap-1">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              activeTab === tab.id
+                ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-md'
+                : 'text-ink-600 hover:text-primary-600 hover:bg-cream-50'
+            }`}
+          >
+            <tab.icon size={18} />
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'overview' ? renderOverviewTab() : renderNetworkTab()}
       
       <div className="h-20 md:hidden" />
     </div>
