@@ -89,6 +89,7 @@ function recordsToExcelData(records: GiftRecord[]): Record<string, string | numb
     '收支方向': record.direction === 'expense' ? '支出' : '收入',
     '金额': record.amount,
     '备注': record.note,
+    '标签': (record.tags || []).join('、'),
   }));
 }
 
