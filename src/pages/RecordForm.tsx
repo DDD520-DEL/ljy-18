@@ -46,6 +46,7 @@ export default function RecordForm() {
   const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressTemplateId = useRef<string | null>(null);
+  const longPressFiredRef = useRef<boolean>(false);
   
   const showCents = preferences.showCents;
   
@@ -195,7 +196,9 @@ export default function RecordForm() {
 
   const handleTemplateLongPressStart = (templateId: string) => {
     longPressTemplateId.current = templateId;
+    longPressFiredRef.current = false;
     longPressTimerRef.current = setTimeout(() => {
+      longPressFiredRef.current = true;
       setDeleteTemplateId(templateId);
     }, 500);
   };
@@ -209,7 +212,8 @@ export default function RecordForm() {
   };
 
   const handleTemplateClick = (template: RecordTemplate) => {
-    if (longPressTemplateId.current === template.id) {
+    if (longPressFiredRef.current) {
+      longPressFiredRef.current = false;
       return;
     }
     applyTemplate(template);
