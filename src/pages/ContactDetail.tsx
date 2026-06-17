@@ -16,12 +16,13 @@ export default function ContactDetail() {
   const setContactGroup = useGiftStore(state => state.setContactGroup);
   const refreshRecords = useGiftStore(state => state.refreshRecords);
   const preferences = useGiftStore(state => state.preferences);
+  const records = useGiftStore(state => state.records);
+  const groups = useGiftStore(state => state.groups);
   const showCents = preferences.showCents;
   
   const [filterTags, setFilterTags] = useState<string[]>([]);
   const [previewImages, setPreviewImages] = useState<{ urls: string[]; index: number } | null>(null);
   const [showGroupPicker, setShowGroupPicker] = useState(false);
-  const [, forceUpdate] = useState(0);
   const groupPickerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
@@ -35,7 +36,7 @@ export default function ContactDetail() {
   }, []);
   
   const contactName = name ? decodeURIComponent(name) : '';
-  const contact = getContactDetail(contactName);
+  const contact = useMemo(() => getContactDetail(contactName), [contactName, records, getContactDetail]);
   
   const availableTags = useMemo(() => {
     if (!contact) return [];
@@ -143,9 +144,7 @@ export default function ContactDetail() {
                   <button
                     onClick={() => {
                       setContactGroup(contactName, null);
-                      refreshRecords();
                       setShowGroupPicker(false);
-                      forceUpdate(n => n + 1);
                     }}
                     className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-cream-50 transition-all ${
                       !contact.groupId ? 'text-primary-600 bg-primary-50' : 'text-ink-600'
@@ -154,14 +153,12 @@ export default function ContactDetail() {
                     {!contact.groupId && <Check size={16} className="text-primary-500" />}
                     <span className={!contact.groupId ? '' : 'ml-6'}>未分组</span>
                   </button>
-                  {getGroups().map(group => (
+                  {groups.map(group => (
                     <button
                       key={group.id}
                       onClick={() => {
                         setContactGroup(contactName, group.id);
-                        refreshRecords();
                         setShowGroupPicker(false);
-                        forceUpdate(n => n + 1);
                       }}
                       className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-cream-50 transition-all ${
                         contact.groupId === group.id ? 'text-primary-600 bg-primary-50' : 'text-ink-600'

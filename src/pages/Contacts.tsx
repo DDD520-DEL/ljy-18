@@ -29,6 +29,7 @@ export default function Contacts() {
   const undoLastMerge = useGiftStore(state => state.undoLastMerge);
   const preferences = useGiftStore(state => state.preferences);
   const groups = useGiftStore(state => state.groups);
+  const records = useGiftStore(state => state.records);
   
   const showCents = preferences.showCents;
   
@@ -44,8 +45,8 @@ export default function Contacts() {
   const [toasts, setToasts] = useState<ToastState[]>([]);
   const [showGroupManager, setShowGroupManager] = useState(false);
   
-  const contacts = getContactSummaryList();
-  const groupSummaries = getGroupSummaries();
+  const contacts = useMemo(() => getContactSummaryList(), [records, getContactSummaryList]);
+  const groupSummaries = useMemo(() => getGroupSummaries(), [records, getGroupSummaries]);
   
   const availableTags = useMemo(() => {
     const tagSet = new Set<string>(DEFAULT_TAGS);
@@ -510,9 +511,6 @@ export default function Contacts() {
                 } else {
                   navigate(`/contacts/${encodeURIComponent(contact.name)}`);
                 }
-              }}
-              onGroupChange={() => {
-                setActiveGroupId(prev => prev);
               }}
             />
           ))
