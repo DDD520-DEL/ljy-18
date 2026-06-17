@@ -4,7 +4,9 @@ import { useGiftStore } from '@/store/useGiftStore';
 import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, DEFAULT_TAGS, TAG_COLORS, type EventType, type Direction } from '@/types';
 import { getTodayStr, formatDate } from '@/utils/date';
 import { formatMoney } from '@/utils/money';
-import { ArrowLeft, Save, Lightbulb, Gift, AlertCircle, Tag, Plus, X } from 'lucide-react';
+import { ArrowLeft, Save, Lightbulb, Gift, AlertCircle, Tag, Plus, X, Image } from 'lucide-react';
+import ImageUploader from '@/components/ImageUploader';
+import ImagePreview from '@/components/ImagePreview';
 
 export default function RecordForm() {
   const navigate = useNavigate();
@@ -31,6 +33,8 @@ export default function RecordForm() {
   const [customTagInput, setCustomTagInput] = useState('');
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [showBudgetWarning, setShowBudgetWarning] = useState(false);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [previewImages, setPreviewImages] = useState<{ urls: string[]; index: number } | null>(null);
   
   const suggestion = direction === 'expense' && contactName.trim() 
     ? getGiftSuggestion(contactName.trim()) 
@@ -61,6 +65,7 @@ export default function RecordForm() {
         setDate(record.date);
         setNote(record.note);
         setTags(record.tags || []);
+        setImageUrls(record.imageUrls || []);
       } else {
         navigate('/records');
       }
@@ -98,6 +103,7 @@ export default function RecordForm() {
       date,
       note: note.trim(),
       tags,
+      imageUrls,
     };
     
     if (isEdit && id) {
@@ -498,6 +504,21 @@ export default function RecordForm() {
           </div>
         </div>
         
+        <div>
+          <label className="block text-sm font-medium text-ink-700 mb-2">
+            <span className="flex items-center gap-1.5">
+              <Image size={16} />
+              图片凭证
+            </span>
+          </label>
+          <p className="text-xs text-ink-400 mb-3">添加红包截图、请柬照片等凭证</p>
+          <ImageUploader
+            imageUrls={imageUrls}
+            onChange={setImageUrls}
+            maxCount={9}
+          />
+        </div>
+        
         <button
           type="submit"
           className="w-full py-3.5 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-xl font-semibold shadow-lg shadow-primary-500/30 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
@@ -508,6 +529,14 @@ export default function RecordForm() {
       </form>
       
       <div className="h-20 md:hidden" />
+      
+      {previewImages && (
+        <ImagePreview
+          images={previewImages.urls}
+          initialIndex={previewImages.index}
+          onClose={() => setPreviewImages(null)}
+        />
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useGiftStore } from '@/store/useGiftStore';
 import RecordItem from '@/components/RecordItem';
+import ImagePreview from '@/components/ImagePreview';
 import { ArrowLeft, TrendingUp, TrendingDown, Wallet, Gift, Tag, X } from 'lucide-react';
 import { formatMoney } from '@/utils/money';
 import { formatDate } from '@/utils/date';
@@ -13,6 +14,7 @@ export default function ContactDetail() {
   const getContactDetail = useGiftStore(state => state.getContactDetail);
   
   const [filterTags, setFilterTags] = useState<string[]>([]);
+  const [previewImages, setPreviewImages] = useState<{ urls: string[]; index: number } | null>(null);
   
   const contactName = name ? decodeURIComponent(name) : '';
   const contact = getContactDetail(contactName);
@@ -248,6 +250,7 @@ export default function ContactDetail() {
                 key={record.id}
                 record={record}
                 onClick={() => navigate(`/records/${record.id}/edit`)}
+                onImageClick={(urls, index) => setPreviewImages({ urls, index })}
               />
             ))
           ) : (
@@ -260,6 +263,14 @@ export default function ContactDetail() {
       </div>
       
       <div className="h-20 md:hidden" />
+      
+      {previewImages && (
+        <ImagePreview
+          images={previewImages.urls}
+          initialIndex={previewImages.index}
+          onClose={() => setPreviewImages(null)}
+        />
+      )}
     </div>
   );
 }

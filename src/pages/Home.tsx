@@ -1,14 +1,17 @@
+import { useState } from 'react';
 import { useGiftStore } from '@/store/useGiftStore';
 import StatCard from '@/components/StatCard';
 import RecordItem from '@/components/RecordItem';
 import BudgetProgressCard from '@/components/BudgetProgressCard';
 import ReminderCard from '@/components/ReminderCard';
+import ImagePreview from '@/components/ImagePreview';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, TrendingDown, Wallet, Users, Plus, ArrowRight, Bell } from 'lucide-react';
 import { formatMoneyShort } from '@/utils/money';
 
 export default function Home() {
   const navigate = useNavigate();
+  const [previewImages, setPreviewImages] = useState<{ urls: string[]; index: number } | null>(null);
   const getCurrentYearStats = useGiftStore(state => state.getCurrentYearStats);
   const getRecentRecords = useGiftStore(state => state.getRecentRecords);
   const getTotalStats = useGiftStore(state => state.getTotalStats);
@@ -139,6 +142,7 @@ export default function Home() {
                   key={record.id}
                   record={record}
                   onClick={() => navigate(`/records/${record.id}/edit`)}
+                  onImageClick={(urls, index) => setPreviewImages({ urls, index })}
                 />
               ))
             ) : (
@@ -197,6 +201,14 @@ export default function Home() {
           </div>
         </div>
       </div>
+      
+      {previewImages && (
+        <ImagePreview
+          images={previewImages.urls}
+          initialIndex={previewImages.index}
+          onClose={() => setPreviewImages(null)}
+        />
+      )}
     </div>
   );
 }

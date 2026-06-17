@@ -19,6 +19,7 @@ export interface GiftRecord {
   date: string;
   note: string;
   tags: string[];
+  imageUrls: string[];
   createdAt: string;
   updatedAt: string;
 }

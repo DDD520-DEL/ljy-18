@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGiftStore } from '@/store/useGiftStore';
 import RecordItem from '@/components/RecordItem';
+import ImagePreview from '@/components/ImagePreview';
 import { Search, Filter, Plus, ArrowUpDown, Trash2, Download, Loader2, Tag, X } from 'lucide-react';
 import { EVENT_TYPE_LABELS, DEFAULT_TAGS, TAG_COLORS, type EventType, type Direction } from '@/types';
 import { formatMoney } from '@/utils/money';
@@ -20,6 +21,7 @@ export default function Records() {
   const [showFilter, setShowFilter] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
+  const [previewImages, setPreviewImages] = useState<{ urls: string[]; index: number } | null>(null);
   
   const availableTags = useMemo(() => {
     const tagSet = new Set<string>(DEFAULT_TAGS);
@@ -346,6 +348,7 @@ export default function Records() {
               <RecordItem
                 record={record}
                 onClick={() => navigate(`/records/${record.id}/edit`)}
+                onImageClick={(urls, index) => setPreviewImages({ urls, index })}
               />
               <button
                 onClick={(e) => {
@@ -391,6 +394,14 @@ export default function Records() {
       )}
       
       <div className="h-20 md:hidden" />
+      
+      {previewImages && (
+        <ImagePreview
+          images={previewImages.urls}
+          initialIndex={previewImages.index}
+          onClose={() => setPreviewImages(null)}
+        />
+      )}
     </div>
   );
 }
