@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useGiftStore } from '@/store/useGiftStore';
-import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, DEFAULT_TAGS, TAG_COLORS, type EventType, type Direction } from '@/types';
+import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, DEFAULT_TAGS, TAG_COLORS, type EventType, type Direction, type RecordTemplate } from '@/types';
 import { getTodayStr, formatDate } from '@/utils/date';
 import { formatMoney } from '@/utils/money';
-import { ArrowLeft, Save, Lightbulb, Gift, AlertCircle, Tag, Plus, X, Image } from 'lucide-react';
+import { ArrowLeft, Save, Lightbulb, Gift, AlertCircle, Tag, Plus, X, Image, Bookmark, Trash2 } from 'lucide-react';
 import ImageUploader from '@/components/ImageUploader';
 import ImagePreview from '@/components/ImagePreview';
 
@@ -22,6 +22,9 @@ export default function RecordForm() {
   const checkMonthlyBudgetAfterExpense = useGiftStore(state => state.checkMonthlyBudgetAfterExpense);
   const getBudgetProgress = useGiftStore(state => state.getBudgetProgress);
   const preferences = useGiftStore(state => state.preferences);
+  const templates = useGiftStore(state => state.templates);
+  const addTemplate = useGiftStore(state => state.addTemplate);
+  const removeTemplate = useGiftStore(state => state.removeTemplate);
   
   const [contactName, setContactName] = useState('');
   const [eventType, setEventType] = useState<EventType>('wedding');
@@ -38,6 +41,11 @@ export default function RecordForm() {
   const [showBudgetWarning, setShowBudgetWarning] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [previewImages, setPreviewImages] = useState<{ urls: string[]; index: number } | null>(null);
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTemplateId = useRef<string | null>(null);
   
   const showCents = preferences.showCents;
   
@@ -152,6 +160,66 @@ export default function RecordForm() {
   
   const removeTag = (tag: string) => {
     setTags(prev => prev.filter(t => t !== tag));
+  };
+
+  const handleSaveTemplate = () => {
+    if (!templateName.trim()) {
+      alert('请输入模板名称');
+      return;
+    }
+    if (!amount || Number(amount) <= 0) {
+      alert('请先填写金额再保存模板');
+      return;
+    }
+    addTemplate({
+      name: templateName.trim(),
+      eventType,
+      eventName: eventName.trim() || EVENT_TYPE_LABELS[eventType],
+      amount: Number(amount),
+      direction,
+      note: note.trim(),
+      tags: [...tags],
+    });
+    setShowSaveTemplateModal(false);
+    setTemplateName('');
+  };
+
+  const applyTemplate = (template: RecordTemplate) => {
+    setEventType(template.eventType);
+    setEventName(template.eventName);
+    setAmount(template.amount.toString());
+    setDirection(template.direction);
+    setNote(template.note);
+    setTags([...template.tags]);
+  };
+
+  const handleTemplateLongPressStart = (templateId: string) => {
+    longPressTemplateId.current = templateId;
+    longPressTimerRef.current = setTimeout(() => {
+      setDeleteTemplateId(templateId);
+    }, 500);
+  };
+
+  const handleTemplateLongPressEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressTemplateId.current = null;
+  };
+
+  const handleTemplateClick = (template: RecordTemplate) => {
+    if (longPressTemplateId.current === template.id) {
+      return;
+    }
+    applyTemplate(template);
+  };
+
+  const confirmDeleteTemplate = () => {
+    if (deleteTemplateId) {
+      removeTemplate(deleteTemplateId);
+      setDeleteTemplateId(null);
+    }
   };
   
   return (
@@ -523,6 +591,68 @@ export default function RecordForm() {
             maxCount={9}
           />
         </div>
+
+        <div className="border-t border-cream-200 pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-sm font-medium text-ink-700 flex items-center gap-1.5">
+              <Bookmark size={16} />
+              快捷模板
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                setTemplateName('');
+                setShowSaveTemplateModal(true);
+              }}
+              className="text-xs text-primary-500 hover:text-primary-600 flex items-center gap-1"
+            >
+              <Plus size={14} />
+              保存当前为模板
+            </button>
+          </div>
+          
+          {templates.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {templates.map((template) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  onClick={() => handleTemplateClick(template)}
+                  onMouseDown={() => handleTemplateLongPressStart(template.id)}
+                  onMouseUp={handleTemplateLongPressEnd}
+                  onMouseLeave={handleTemplateLongPressEnd}
+                  onTouchStart={() => handleTemplateLongPressStart(template.id)}
+                  onTouchEnd={handleTemplateLongPressEnd}
+                  className={`group relative px-3 py-2 rounded-xl text-left transition-all select-none ${
+                    template.direction === 'expense'
+                      ? 'bg-primary-50 hover:bg-primary-100 border border-primary-200'
+                      : 'bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{EVENT_TYPE_ICONS[template.eventType]}</span>
+                    <div>
+                      <p className="text-sm font-medium text-ink-700">{template.name}</p>
+                      <p className={`text-xs font-semibold tabular-nums ${
+                        template.direction === 'expense' ? 'text-primary-600' : 'text-emerald-600'
+                      }`}>
+                        {template.direction === 'expense' ? '-' : '+'}{formatMoney(template.amount, showCents)}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-ink-400 text-center py-3">
+              暂无模板，点击上方按钮保存常用记账组合
+            </p>
+          )}
+          
+          <p className="text-xs text-ink-400 mt-2 text-center">
+            💡 点击模板快速填入，长按可删除
+          </p>
+        </div>
         
         <button
           type="submit"
@@ -534,6 +664,81 @@ export default function RecordForm() {
       </form>
       
       <div className="h-20 md:hidden" />
+      
+      {showSaveTemplateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm animate-slide-up">
+            <h3 className="text-lg font-semibold text-ink-800 mb-2">保存为模板</h3>
+            <p className="text-sm text-ink-500 mb-4">
+              将当前的记账组合保存为快捷模板，下次可一键填入
+            </p>
+            <input
+              type="text"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              placeholder="请输入模板名称，如：同事婚礼"
+              autoFocus
+              className="w-full px-4 py-3 bg-cream-50 border border-cream-200 rounded-xl text-ink-800 placeholder:text-ink-300 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all mb-4"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSaveTemplate();
+                }
+              }}
+            />
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSaveTemplateModal(false);
+                  setTemplateName('');
+                }}
+                className="flex-1 py-2.5 bg-cream-100 hover:bg-cream-200 text-ink-600 rounded-xl font-medium transition-colors"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveTemplate}
+                className="flex-1 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-xl font-medium transition-colors"
+              >
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTemplateId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm animate-slide-up">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 size={20} className="text-red-500" />
+              </div>
+              <h3 className="text-lg font-semibold text-ink-800">删除模板</h3>
+            </div>
+            <p className="text-sm text-ink-500 mb-6">
+              确定要删除这个模板吗？删除后无法恢复。
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteTemplateId(null)}
+                className="flex-1 py-2.5 bg-cream-100 hover:bg-cream-200 text-ink-600 rounded-xl font-medium transition-colors"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteTemplate}
+                className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-colors"
+              >
+                删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {previewImages && (
         <ImagePreview

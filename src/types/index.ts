@@ -224,6 +224,18 @@ export interface UserPreferences {
   showCents: boolean;
 }
 
+export interface RecordTemplate {
+  id: string;
+  name: string;
+  eventType: EventType;
+  eventName: string;
+  amount: number;
+  direction: Direction;
+  note: string;
+  tags: string[];
+  createdAt: string;
+}
+
 export const DEFAULT_PREFERENCES: UserPreferences = {
   defaultDirection: 'expense',
   recentRecordsCount: 5,

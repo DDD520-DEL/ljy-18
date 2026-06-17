@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, YearlyBudget, BudgetProgress, ReturnGiftReminder, MergeResult, MergeRecord, Ledger, RelationNetworkData, UserPreferences } from '@/types';
+import type { GiftRecord, ContactSummary, YearlyStats, GiftSuggestion, YearlyBudget, BudgetProgress, ReturnGiftReminder, MergeResult, MergeRecord, Ledger, RelationNetworkData, UserPreferences, RecordTemplate } from '@/types';
 import { 
   getRecords, 
   addRecord as storageAddRecord, 
@@ -31,6 +31,9 @@ import {
   clearAllRecycleBin as storageClearAllRecycleBin,
   getRecycleBinCount as storageGetRecycleBinCount,
   cleanExpiredRecycleBin as storageCleanExpiredRecycleBin,
+  getTemplates as storageGetTemplates,
+  addTemplate as storageAddTemplate,
+  deleteTemplate as storageDeleteTemplate,
 } from '@/services/storage';
 import {
   getContactSummaryList,
@@ -88,6 +91,7 @@ interface GiftStore {
   currentLedgerId: string;
   isInitialized: boolean;
   preferences: UserPreferences;
+  templates: RecordTemplate[];
   
   initialize: () => void;
   loadMockData: () => void;
@@ -157,6 +161,10 @@ interface GiftStore {
   decryptBackup: (encryptedData: string, password: string, onProgress?: (progress: BackupProgress) => void) => Promise<BackupFile>;
   importBackup: (backupFile: BackupFile, mode: ImportMode, onProgress?: (progress: BackupProgress) => void) => Promise<ImportResult>;
   checkLocalDataExists: () => boolean;
+
+  refreshTemplates: () => void;
+  addTemplate: (template: Omit<RecordTemplate, 'id' | 'createdAt'>) => RecordTemplate;
+  removeTemplate: (id: string) => boolean;
 }
 
 export const useGiftStore = create<GiftStore>((set, get) => ({
@@ -167,6 +175,7 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
   currentLedgerId: '',
   isInitialized: false,
   preferences: storageGetUserPreferences(),
+  templates: [],
   
   initialize: () => {
     const { isInitialized } = get();
@@ -182,8 +191,9 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
     const recycleBinRecords = storageGetRecycleBinRecords();
     const recycleBinCount = storageGetRecycleBinCount();
     const preferences = storageGetUserPreferences();
+    const templates = storageGetTemplates();
     
-    set({ records, recycleBinRecords, recycleBinCount, ledgers, currentLedgerId, isInitialized: true, preferences });
+    set({ records, recycleBinRecords, recycleBinCount, ledgers, currentLedgerId, isInitialized: true, preferences, templates });
   },
   
   loadMockData: () => {
@@ -447,5 +457,23 @@ export const useGiftStore = create<GiftStore>((set, get) => ({
 
   checkLocalDataExists: () => {
     return serviceCheckLocalDataExists();
+  },
+
+  refreshTemplates: () => {
+    set({ templates: storageGetTemplates() });
+  },
+
+  addTemplate: (template) => {
+    const newTemplate = storageAddTemplate(template);
+    set({ templates: storageGetTemplates() });
+    return newTemplate;
+  },
+
+  removeTemplate: (id) => {
+    const success = storageDeleteTemplate(id);
+    if (success) {
+      set({ templates: storageGetTemplates() });
+    }
+    return success;
   },
 }));

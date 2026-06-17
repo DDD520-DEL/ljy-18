@@ -1,4 +1,4 @@
-import type { GiftRecord, YearlyBudget, MergeRecord, MergeResult, Ledger, UserPreferences } from '@/types';
+import type { GiftRecord, YearlyBudget, MergeRecord, MergeResult, Ledger, UserPreferences, RecordTemplate } from '@/types';
 import { generateId } from '@/utils/id';
 import { DEFAULT_PREFERENCES, RECYCLE_BIN_DAYS } from '@/types';
 
@@ -626,4 +626,52 @@ export function setUserPreferences(preferences: Partial<UserPreferences>): UserP
     console.error('保存用户偏好设置失败:', e);
     return { ...DEFAULT_PREFERENCES };
   }
+}
+
+const TEMPLATES_KEY = 'gift_ledger_templates';
+
+export function getTemplates(): RecordTemplate[] {
+  try {
+    const raw = localStorage.getItem(TEMPLATES_KEY);
+    if (raw) {
+      const templates = JSON.parse(raw) as RecordTemplate[];
+      return templates.sort((a, b) => 
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+    }
+  } catch (e) {
+    console.error('读取模板失败:', e);
+  }
+  return [];
+}
+
+export function addTemplate(template: Omit<RecordTemplate, 'id' | 'createdAt'>): RecordTemplate {
+  const templates = getTemplates();
+  const now = new Date().toISOString();
+  const newTemplate: RecordTemplate = {
+    ...template,
+    id: generateId(),
+    createdAt: now,
+  };
+  templates.push(newTemplate);
+  try {
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates));
+  } catch (e) {
+    console.error('保存模板失败:', e);
+  }
+  return newTemplate;
+}
+
+export function deleteTemplate(id: string): boolean {
+  const templates = getTemplates();
+  const initialLength = templates.length;
+  const filtered = templates.filter(t => t.id !== id);
+  if (filtered.length === initialLength) return false;
+  try {
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(filtered));
+  } catch (e) {
+    console.error('删除模板失败:', e);
+    return false;
+  }
+  return true;
 }
