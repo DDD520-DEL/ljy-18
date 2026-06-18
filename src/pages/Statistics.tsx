@@ -13,13 +13,15 @@ import {
   Cell,
   Legend
 } from 'recharts';
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, Calendar, Download, Loader2, Target, AlertTriangle, Network, BarChart3 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, Calendar, Download, Loader2, Target, AlertTriangle, Network, BarChart3, Share2 } from 'lucide-react';
 import { formatMoney, formatMoneyWithSign } from '@/utils/money';
 import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, TAG_CHART_COLORS, type EventType } from '@/types';
 import { exportStatisticsToExcel, formatExportDate, type ExportProgress } from '@/utils/export';
 import { useNavigate } from 'react-router-dom';
 import RelationNetworkGraph from '@/components/RelationNetworkGraph';
+import ShareCardModal from '@/components/ShareCardModal';
 import { useTheme } from '@/hooks/useTheme';
+import type { ShareCardData } from '@/utils/shareCard';
 
 const CHART_COLORS = {
   expense: '#C41E3A',
@@ -64,6 +66,7 @@ export default function Statistics() {
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [networkRange, setNetworkRange] = useState<NetworkRange>('all');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   
   const stats = getYearlyStats(selectedYear);
   const budgetProgress = getBudgetProgress(selectedYear);
@@ -80,6 +83,22 @@ export default function Statistics() {
       return recordYear === selectedYear;
     });
   }, [records, selectedYear]);
+
+  const shareCardData = useMemo<ShareCardData>(() => {
+    const contactNames = new Set(yearRecords.map(r => r.contactName));
+    const maxAmount = yearRecords.length > 0
+      ? Math.max(...yearRecords.map(r => r.amount))
+      : 0;
+
+    return {
+      year: selectedYear,
+      totalExpense: stats.totalExpense,
+      totalIncome: stats.totalIncome,
+      contactCount: contactNames.size,
+      maxSingleAmount: maxAmount,
+      appName: '人情账本',
+    };
+  }, [yearRecords, selectedYear, stats]);
   
   const currentYearIndex = availableYears.indexOf(selectedYear);
   
@@ -168,19 +187,29 @@ export default function Statistics() {
         <h1 className="text-2xl font-serif font-bold text-ink-800 dark:text-ink-200">
           年度统计
         </h1>
-        <button
-          onClick={handleExport}
-          disabled={!!exportProgress || yearRecords.length === 0}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium shadow-md transition-all active:scale-95"
-        >
-          {exportProgress ? (
-            <Loader2 size={18} className="animate-spin" />
-          ) : (
-            <Download size={18} />
-          )}
-          <span className="hidden md:inline">{exportProgress ? '导出中...' : '导出Excel'}</span>
-          <span className="md:hidden">导出</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsShareModalOpen(true)}
+            disabled={yearRecords.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium shadow-md transition-all active:scale-95"
+          >
+            <Share2 size={18} />
+            <span className="hidden md:inline">分享</span>
+          </button>
+          <button
+            onClick={handleExport}
+            disabled={!!exportProgress || yearRecords.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-medium shadow-md transition-all active:scale-95"
+          >
+            {exportProgress ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <Download size={18} />
+            )}
+            <span className="hidden md:inline">{exportProgress ? '导出中...' : '导出Excel'}</span>
+            <span className="md:hidden">导出</span>
+          </button>
+        </div>
       </div>
       
       {exportProgress && exportProgress.phase !== 'downloading' && (
@@ -708,6 +737,12 @@ export default function Statistics() {
       {activeTab === 'overview' ? renderOverviewTab() : renderNetworkTab()}
       
       <div className="h-20 md:hidden" />
+
+      <ShareCardModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        data={shareCardData}
+      />
     </div>
   );
 }
