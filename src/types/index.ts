@@ -231,13 +231,6 @@ export interface RelationNetworkData {
   };
 }
 
-export interface UserPreferences {
-  defaultDirection: Direction;
-  recentRecordsCount: number;
-  showCents: boolean;
-  onboardingCompleted: boolean;
-}
-
 export interface RecordTemplate {
   id: string;
   name: string;
@@ -249,13 +242,6 @@ export interface RecordTemplate {
   tags: string[];
   createdAt: string;
 }
-
-export const DEFAULT_PREFERENCES: UserPreferences = {
-  defaultDirection: 'expense',
-  recentRecordsCount: 5,
-  showCents: false,
-  onboardingCompleted: false,
-};
 
 export interface ContactGroup {
   id: string;
@@ -279,3 +265,90 @@ export const GROUP_COLORS = [
 ];
 
 export const GROUP_ICONS = ['👨‍👩‍👧', '👥', '💼', '🎓', '🏠', '❤️', '🎉', '📚'];
+
+export type WidgetType = 'monthlyTrend' | 'contactRanking' | 'expenseCategory' | 'incomeCategory' | 'recentRecords' | 'budgetProgress';
+
+export interface WidgetConfig {
+  id: string;
+  type: WidgetType;
+  title: string;
+  icon: string;
+  visible: boolean;
+  sortOrder: number;
+  size: 'small' | 'medium' | 'large';
+}
+
+export interface WidgetDefinition {
+  type: WidgetType;
+  title: string;
+  icon: string;
+  description: string;
+  defaultSize: 'small' | 'medium' | 'large';
+}
+
+export const WIDGET_DEFINITIONS: Record<WidgetType, WidgetDefinition> = {
+  monthlyTrend: {
+    type: 'monthlyTrend',
+    title: '本月人情趋势',
+    icon: '📈',
+    description: '显示本月每日收支趋势迷你折线图',
+    defaultSize: 'large',
+  },
+  contactRanking: {
+    type: 'contactRanking',
+    title: '最近往来联系人排行',
+    icon: '👥',
+    description: '按最近往来频率排序的联系人列表',
+    defaultSize: 'medium',
+  },
+  expenseCategory: {
+    type: 'expenseCategory',
+    title: '支出类别占比',
+    icon: '🥧',
+    description: '本年支出按类别的环形图占比',
+    defaultSize: 'small',
+  },
+  incomeCategory: {
+    type: 'incomeCategory',
+    title: '收入类别占比',
+    icon: '💰',
+    description: '本年收入按类别的环形图占比',
+    defaultSize: 'small',
+  },
+  recentRecords: {
+    type: 'recentRecords',
+    title: '最近记录',
+    icon: '📋',
+    description: '最近添加的人情往来记录',
+    defaultSize: 'medium',
+  },
+  budgetProgress: {
+    type: 'budgetProgress',
+    title: '预算进度',
+    icon: '🎯',
+    description: '年度预算使用进度情况',
+    defaultSize: 'small',
+  },
+};
+
+export const DEFAULT_WIDGETS: WidgetConfig[] = [
+  { id: '1', type: 'monthlyTrend', title: '本月人情趋势', icon: '📈', visible: true, sortOrder: 0, size: 'large' },
+  { id: '2', type: 'contactRanking', title: '最近往来联系人排行', icon: '👥', visible: true, sortOrder: 1, size: 'medium' },
+  { id: '3', type: 'expenseCategory', title: '支出类别占比', icon: '🥧', visible: true, sortOrder: 2, size: 'small' },
+];
+
+export interface UserPreferences {
+  defaultDirection: Direction;
+  recentRecordsCount: number;
+  showCents: boolean;
+  onboardingCompleted: boolean;
+  dashboardWidgets?: WidgetConfig[];
+}
+
+export const DEFAULT_PREFERENCES: UserPreferences = {
+  defaultDirection: 'expense',
+  recentRecordsCount: 5,
+  showCents: false,
+  onboardingCompleted: false,
+  dashboardWidgets: DEFAULT_WIDGETS,
+};

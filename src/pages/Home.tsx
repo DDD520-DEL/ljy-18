@@ -5,6 +5,7 @@ import RecordItem from '@/components/RecordItem';
 import BudgetProgressCard from '@/components/BudgetProgressCard';
 import ReminderCard from '@/components/ReminderCard';
 import ImagePreview from '@/components/ImagePreview';
+import Dashboard from '@/components/Dashboard';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, TrendingDown, Wallet, Users, Plus, ArrowRight, Bell, Star } from 'lucide-react';
 import { formatMoneyShort } from '@/utils/money';
@@ -162,6 +163,8 @@ export default function Home() {
       </div>
       
       <BudgetProgressCard progress={budgetProgress} />
+      
+      <Dashboard />
       
       <div className="grid md:grid-cols-3 gap-6">
         <div className="md:col-span-2 card p-5">
