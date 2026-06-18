@@ -3,8 +3,9 @@ import { useGiftStore } from '@/store/useGiftStore';
 import { 
   ArrowLeft, Save, Target, TrendingUp, Wallet, AlertCircle, Trash2,
   Download, Upload, Lock, Unlock, Merge, HardDrive, Check, X, Eye, EyeOff,
-  Settings2, ListTodo, ArrowRightLeft, Banknote, RotateCcw
+  Settings2, ListTodo, ArrowRightLeft, Banknote, RotateCcw, Sun, Moon, Monitor
 } from 'lucide-react';
+import { useTheme } from '@/hooks/useTheme';
 import { useNavigate } from 'react-router-dom';
 import { formatMoney } from '@/utils/money';
 import { BACKUP_FILE_EXTENSION, formatBackupTimestamp, type BackupFile, type ImportMode, type BackupProgress } from '@/services/backup';
@@ -14,6 +15,7 @@ type ModalType = 'export' | 'import' | 'import-mode' | null;
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { themeMode, setTheme } = useTheme();
   const getYearlyBudget = useGiftStore(state => state.getYearlyBudget);
   const setYearlyBudget = useGiftStore(state => state.setYearlyBudget);
   const deleteYearlyBudget = useGiftStore(state => state.deleteYearlyBudget);
@@ -290,7 +292,52 @@ export default function Settings() {
           
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-ink-700 mb-3 flex items-center gap-2">
+              <label className="block text-sm font-medium text-ink-700 dark:text-ink-300 mb-3 flex items-center gap-2">
+                <Sun size={16} className="text-primary-500" />
+                主题模式
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setTheme('light')}
+                  className={`py-3 px-4 rounded-xl font-medium transition-all flex flex-col items-center gap-2 ${
+                    themeMode === 'light'
+                      ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
+                      : 'bg-cream-100 dark:bg-ink-800 text-ink-600 dark:text-ink-400 hover:bg-cream-200 dark:hover:bg-ink-700'
+                  }`}
+                >
+                  <Sun size={20} />
+                  <span className="text-sm">浅色</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme('dark')}
+                  className={`py-3 px-4 rounded-xl font-medium transition-all flex flex-col items-center gap-2 ${
+                    themeMode === 'dark'
+                      ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
+                      : 'bg-cream-100 dark:bg-ink-800 text-ink-600 dark:text-ink-400 hover:bg-cream-200 dark:hover:bg-ink-700'
+                  }`}
+                >
+                  <Moon size={20} />
+                  <span className="text-sm">深色</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme('system')}
+                  className={`py-3 px-4 rounded-xl font-medium transition-all flex flex-col items-center gap-2 ${
+                    themeMode === 'system'
+                      ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
+                      : 'bg-cream-100 dark:bg-ink-800 text-ink-600 dark:text-ink-400 hover:bg-cream-200 dark:hover:bg-ink-700'
+                  }`}
+                >
+                  <Monitor size={20} />
+                  <span className="text-sm">跟随系统</span>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-ink-700 dark:text-ink-300 mb-3 flex items-center gap-2">
                 <ArrowRightLeft size={16} className="text-primary-500" />
                 记账时默认选中的方向
               </label>

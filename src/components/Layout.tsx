@@ -12,7 +12,7 @@ export default function Layout() {
   }, [initialize]);
   
   return (
-    <div className="min-h-screen bg-cream-100">
+    <div className="min-h-screen bg-cream-100 dark:bg-ink-900 transition-colors duration-300">
       <Header />
       <main className="container mx-auto px-4 py-6 pb-24 md:pb-6">
         <div className="animate-fade-in">

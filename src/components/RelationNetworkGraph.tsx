@@ -4,6 +4,7 @@ import type { RelationNetworkData } from '@/types';
 import { formatMoney } from '@/utils/money';
 import { ZoomIn, ZoomOut, Maximize2, RotateCcw, Users, Layers } from 'lucide-react';
 import { useGiftStore } from '@/store/useGiftStore';
+import { useTheme } from '@/hooks/useTheme';
 
 interface SimNode extends SimulationNodeDatum {
   id: string;
@@ -65,6 +66,7 @@ interface Props {
 }
 
 export default function RelationNetworkGraph({ data }: Props) {
+  const { isDark } = useTheme();
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -526,34 +528,34 @@ export default function RelationNetworkGraph({ data }: Props) {
       const node = hovered.data as SimNode;
       content = (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 pb-2 border-b border-ink-100">
+          <div className="flex items-center gap-2 pb-2 border-b border-ink-100 dark:border-ink-700">
             <div
               className="w-4 h-4 rounded-full flex-shrink-0"
               style={{ backgroundColor: node.color }}
             />
-            <span className="font-bold text-ink-800 text-base">{node.name}</span>
+            <span className="font-bold text-ink-800 dark:text-ink-200 text-base">{node.name}</span>
             {node.isSelf && (
-              <span className="text-[10px] px-1.5 py-0.5 bg-primary-100 text-primary-600 rounded font-medium">
+              <span className="text-[10px] px-1.5 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded font-medium">
                 中心
               </span>
             )}
           </div>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="bg-cream-50 rounded-lg p-2">
-              <p className="text-xs text-ink-400">往来总额</p>
-              <p className="font-bold text-ink-800">{formatMoney(node.totalAmount, showCents)}</p>
+            <div className="bg-cream-50 dark:bg-ink-900 rounded-lg p-2">
+              <p className="text-xs text-ink-400 dark:text-ink-500">往来总额</p>
+              <p className="font-bold text-ink-800 dark:text-ink-200">{formatMoney(node.totalAmount, showCents)}</p>
             </div>
-            <div className="bg-cream-50 rounded-lg p-2">
-              <p className="text-xs text-ink-400">往来笔数</p>
-              <p className="font-bold text-ink-800">{node.recordCount}笔</p>
+            <div className="bg-cream-50 dark:bg-ink-900 rounded-lg p-2">
+              <p className="text-xs text-ink-400 dark:text-ink-500">往来笔数</p>
+              <p className="font-bold text-ink-800 dark:text-ink-200">{node.recordCount}笔</p>
             </div>
-            <div className="bg-red-50 rounded-lg p-2">
-              <p className="text-xs text-red-400">我随出</p>
-              <p className="font-bold text-red-600">{formatMoney(node.totalExpense, showCents)}</p>
+            <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-2">
+              <p className="text-xs text-red-400 dark:text-red-400">我随出</p>
+              <p className="font-bold text-red-600 dark:text-red-400">{formatMoney(node.totalExpense, showCents)}</p>
             </div>
-            <div className="bg-emerald-50 rounded-lg p-2">
-              <p className="text-xs text-emerald-400">我收到</p>
-              <p className="font-bold text-emerald-600">{formatMoney(node.totalIncome, showCents)}</p>
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-2">
+              <p className="text-xs text-emerald-400 dark:text-emerald-400">我收到</p>
+              <p className="font-bold text-emerald-600 dark:text-emerald-400">{formatMoney(node.totalIncome, showCents)}</p>
             </div>
           </div>
         </div>
@@ -564,30 +566,30 @@ export default function RelationNetworkGraph({ data }: Props) {
       const target = link.target as SimNode;
       content = (
         <div className="space-y-2">
-          <div className="flex items-center justify-center gap-2 pb-2 border-b border-ink-100">
-            <span className="font-semibold text-ink-800">{source.name}</span>
-            <span className="text-ink-300">↔</span>
-            <span className="font-semibold text-ink-800">{target.name}</span>
+          <div className="flex items-center justify-center gap-2 pb-2 border-b border-ink-100 dark:border-ink-700">
+            <span className="font-semibold text-ink-800 dark:text-ink-200">{source.name}</span>
+            <span className="text-ink-300 dark:text-ink-600">↔</span>
+            <span className="font-semibold text-ink-800 dark:text-ink-200">{target.name}</span>
           </div>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="bg-cream-50 rounded-lg p-2">
-              <p className="text-xs text-ink-400">往来总额</p>
-              <p className="font-bold text-ink-800">{formatMoney(link.totalAmount, showCents)}</p>
+            <div className="bg-cream-50 dark:bg-ink-900 rounded-lg p-2">
+              <p className="text-xs text-ink-400 dark:text-ink-500">往来总额</p>
+              <p className="font-bold text-ink-800 dark:text-ink-200">{formatMoney(link.totalAmount, showCents)}</p>
             </div>
-            <div className="bg-cream-50 rounded-lg p-2">
-              <p className="text-xs text-ink-400">往来频次</p>
-              <p className="font-bold text-ink-800">{link.frequency}次</p>
+            <div className="bg-cream-50 dark:bg-ink-900 rounded-lg p-2">
+              <p className="text-xs text-ink-400 dark:text-ink-500">往来频次</p>
+              <p className="font-bold text-ink-800 dark:text-ink-200">{link.frequency}次</p>
             </div>
             {link.expenseCount > 0 && (
-              <div className="bg-red-50 rounded-lg p-2">
-                <p className="text-xs text-red-400">我随出 {link.expenseCount}次</p>
-                <p className="font-bold text-red-600">{formatMoney(link.expenseAmount, showCents)}</p>
+              <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-2">
+                <p className="text-xs text-red-400 dark:text-red-400">我随出 {link.expenseCount}次</p>
+                <p className="font-bold text-red-600 dark:text-red-400">{formatMoney(link.expenseAmount, showCents)}</p>
               </div>
             )}
             {link.incomeCount > 0 && (
-              <div className="bg-emerald-50 rounded-lg p-2">
-                <p className="text-xs text-emerald-400">我收到 {link.incomeCount}次</p>
-                <p className="font-bold text-emerald-600">{formatMoney(link.incomeAmount, showCents)}</p>
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-2">
+                <p className="text-xs text-emerald-400 dark:text-emerald-400">我收到 {link.incomeCount}次</p>
+                <p className="font-bold text-emerald-600 dark:text-emerald-400">{formatMoney(link.incomeAmount, showCents)}</p>
               </div>
             )}
           </div>
@@ -597,7 +599,7 @@ export default function RelationNetworkGraph({ data }: Props) {
 
     return (
       <div
-        className="absolute z-50 pointer-events-none bg-white rounded-xl shadow-xl border border-ink-100 p-3"
+        className="absolute z-50 pointer-events-none bg-white dark:bg-ink-800 rounded-xl shadow-xl border border-ink-100 dark:border-ink-700 p-3"
         style={{
           left: tipX,
           top: tipY,
@@ -611,91 +613,91 @@ export default function RelationNetworkGraph({ data }: Props) {
   };
 
   return (
-    <div ref={containerRef} className="relative w-full h-full bg-gradient-to-br from-cream-50 to-white rounded-2xl overflow-hidden border border-ink-100">
+    <div ref={containerRef} className="relative w-full h-full bg-gradient-to-br from-cream-50 to-white dark:from-ink-900 dark:to-ink-800 rounded-2xl overflow-hidden border border-ink-100 dark:border-ink-700 transition-colors duration-300">
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
         <button
           onClick={zoomIn}
-          className="w-9 h-9 bg-white rounded-xl shadow-md hover:shadow-lg border border-ink-100 flex items-center justify-center text-ink-600 hover:text-primary-600 transition-all active:scale-95"
+          className="w-9 h-9 bg-white dark:bg-ink-800 rounded-xl shadow-md hover:shadow-lg border border-ink-100 dark:border-ink-700 flex items-center justify-center text-ink-600 dark:text-ink-400 hover:text-primary-600 dark:hover:text-primary-400 transition-all active:scale-95"
           title="放大"
         >
           <ZoomIn size={18} />
         </button>
         <button
           onClick={zoomOut}
-          className="w-9 h-9 bg-white rounded-xl shadow-md hover:shadow-lg border border-ink-100 flex items-center justify-center text-ink-600 hover:text-primary-600 transition-all active:scale-95"
+          className="w-9 h-9 bg-white dark:bg-ink-800 rounded-xl shadow-md hover:shadow-lg border border-ink-100 dark:border-ink-700 flex items-center justify-center text-ink-600 dark:text-ink-400 hover:text-primary-600 dark:hover:text-primary-400 transition-all active:scale-95"
           title="缩小"
         >
           <ZoomOut size={18} />
         </button>
         <button
           onClick={fitToScreen}
-          className="w-9 h-9 bg-white rounded-xl shadow-md hover:shadow-lg border border-ink-100 flex items-center justify-center text-ink-600 hover:text-primary-600 transition-all active:scale-95"
+          className="w-9 h-9 bg-white dark:bg-ink-800 rounded-xl shadow-md hover:shadow-lg border border-ink-100 dark:border-ink-700 flex items-center justify-center text-ink-600 dark:text-ink-400 hover:text-primary-600 dark:hover:text-primary-400 transition-all active:scale-95"
           title="适应屏幕"
         >
           <Maximize2 size={18} />
         </button>
         <button
           onClick={resetView}
-          className="w-9 h-9 bg-white rounded-xl shadow-md hover:shadow-lg border border-ink-100 flex items-center justify-center text-ink-600 hover:text-primary-600 transition-all active:scale-95"
+          className="w-9 h-9 bg-white dark:bg-ink-800 rounded-xl shadow-md hover:shadow-lg border border-ink-100 dark:border-ink-700 flex items-center justify-center text-ink-600 dark:text-ink-400 hover:text-primary-600 dark:hover:text-primary-400 transition-all active:scale-95"
           title="重置视图"
         >
           <RotateCcw size={18} />
         </button>
       </div>
 
-      <div className="absolute bottom-4 left-4 z-10 bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-ink-100 p-3 space-y-2 text-xs">
-        <div className="font-semibold text-ink-700 flex items-center gap-1.5 pb-1 border-b border-ink-100">
+      <div className="absolute bottom-4 left-4 z-10 bg-white/90 dark:bg-ink-800/90 backdrop-blur-sm rounded-xl shadow-md border border-ink-100 dark:border-ink-700 p-3 space-y-2 text-xs">
+        <div className="font-semibold text-ink-700 dark:text-ink-300 flex items-center gap-1.5 pb-1 border-b border-ink-100 dark:border-ink-700">
           <Layers size={14} className="text-primary-500" />
           图例说明
         </div>
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#C41E3A' }} />
-            <span className="text-ink-600">红色连线：我随给对方</span>
+            <span className="text-ink-600 dark:text-ink-400">红色连线：我随给对方</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#10B981' }} />
-            <span className="text-ink-600">绿色连线：对方随给我</span>
+            <span className="text-ink-600 dark:text-ink-400">绿色连线：对方随给我</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-0.5" style={{ backgroundColor: '#9CA3AF', height: '1px' }} />
-            <span className="text-ink-600">连线粗细 = 往来频次</span>
+            <div className="w-6 h-0.5" style={{ backgroundColor: isDark ? '#525252' : '#9CA3AF', height: '1px' }} />
+            <span className="text-ink-600 dark:text-ink-400">连线粗细 = 往来频次</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex gap-1 items-center">
-              <div className="w-3 h-3 rounded-full bg-ink-300" />
-              <div className="w-4 h-4 rounded-full bg-ink-400" />
-              <div className="w-5 h-5 rounded-full bg-ink-500" />
+              <div className="w-3 h-3 rounded-full bg-ink-300 dark:bg-ink-600" />
+              <div className="w-4 h-4 rounded-full bg-ink-400 dark:bg-ink-500" />
+              <div className="w-5 h-5 rounded-full bg-ink-500 dark:bg-ink-400" />
             </div>
-            <span className="text-ink-600">节点大小 = 往来金额</span>
+            <span className="text-ink-600 dark:text-ink-400">节点大小 = 往来金额</span>
           </div>
         </div>
       </div>
 
-      <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-sm rounded-xl shadow-md border border-ink-100 p-3 text-xs">
-        <div className="font-semibold text-ink-700 flex items-center gap-1.5 pb-1.5 border-b border-ink-100">
+      <div className="absolute top-4 left-4 z-10 bg-white/90 dark:bg-ink-800/90 backdrop-blur-sm rounded-xl shadow-md border border-ink-100 dark:border-ink-700 p-3 text-xs">
+        <div className="font-semibold text-ink-700 dark:text-ink-300 flex items-center gap-1.5 pb-1.5 border-b border-ink-100 dark:border-ink-700">
           <Users size={14} className="text-primary-500" />
           网络概览
         </div>
         <div className="grid grid-cols-3 gap-3 pt-2">
           <div className="text-center">
-            <p className="text-ink-400 text-[10px]">联系人</p>
-            <p className="font-bold text-ink-800 text-lg">{data.summary.totalContacts}</p>
+            <p className="text-ink-400 dark:text-ink-500 text-[10px]">联系人</p>
+            <p className="font-bold text-ink-800 dark:text-ink-200 text-lg">{data.summary.totalContacts}</p>
           </div>
           <div className="text-center">
-            <p className="text-ink-400 text-[10px]">记录数</p>
-            <p className="font-bold text-ink-800 text-lg">{data.summary.totalRecords}</p>
+            <p className="text-ink-400 dark:text-ink-500 text-[10px]">记录数</p>
+            <p className="font-bold text-ink-800 dark:text-ink-200 text-lg">{data.summary.totalRecords}</p>
           </div>
           <div className="text-center">
-            <p className="text-ink-400 text-[10px]">总金额</p>
-            <p className="font-bold text-primary-600 text-sm">{formatMoney(data.summary.totalAmount, showCents)}</p>
+            <p className="text-ink-400 dark:text-ink-500 text-[10px]">总金额</p>
+            <p className="font-bold text-primary-600 dark:text-primary-400 text-sm">{formatMoney(data.summary.totalAmount, showCents)}</p>
           </div>
         </div>
       </div>
 
       {data.summary.totalContacts === 0 ? (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center text-ink-300">
+          <div className="text-center text-ink-300 dark:text-ink-600">
             <p className="text-6xl mb-4">🕸️</p>
             <p className="text-lg font-medium">暂无人情往来数据</p>
             <p className="text-sm mt-1">添加记录后，关系网络将自动生成</p>

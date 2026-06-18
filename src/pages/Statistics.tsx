@@ -19,6 +19,7 @@ import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS, TAG_CHART_COLORS, type EventType }
 import { exportStatisticsToExcel, formatExportDate, type ExportProgress } from '@/utils/export';
 import { useNavigate } from 'react-router-dom';
 import RelationNetworkGraph from '@/components/RelationNetworkGraph';
+import { useTheme } from '@/hooks/useTheme';
 
 const CHART_COLORS = {
   expense: '#C41E3A',
@@ -46,6 +47,7 @@ type NetworkRange = 'all' | 'yearly';
 
 export default function Statistics() {
   const navigate = useNavigate();
+  const { isDark } = useTheme();
   const records = useGiftStore(state => state.records);
   const showCents = useGiftStore(state => state.preferences.showCents);
   const getAvailableYears = useGiftStore(state => state.getAvailableYears);
@@ -163,7 +165,7 @@ export default function Statistics() {
   const renderOverviewTab = () => (
     <>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-serif font-bold text-ink-800">
+        <h1 className="text-2xl font-serif font-bold text-ink-800 dark:text-ink-200">
           年度统计
         </h1>
         <button
@@ -182,12 +184,12 @@ export default function Statistics() {
       </div>
       
       {exportProgress && exportProgress.phase !== 'downloading' && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
-          <div className="flex items-center justify-between text-sm text-emerald-700 mb-2">
+        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3">
+          <div className="flex items-center justify-between text-sm text-emerald-700 dark:text-emerald-400 mb-2">
             <span>正在导出 {exportProgress.total} 条记录...</span>
             <span>{Math.round((exportProgress.current / exportProgress.total) * 100)}%</span>
           </div>
-          <div className="h-2 bg-emerald-100 rounded-full overflow-hidden">
+          <div className="h-2 bg-emerald-100 dark:bg-emerald-900/50 rounded-full overflow-hidden">
             <div 
               className="h-full bg-emerald-500 rounded-full transition-all duration-300"
               style={{ width: `${(exportProgress.current / exportProgress.total) * 100}%` }}
@@ -200,22 +202,22 @@ export default function Statistics() {
         <button
           onClick={goToPrevYear}
           disabled={currentYearIndex >= availableYears.length - 1}
-          className="p-2 bg-white rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          className="p-2 bg-white dark:bg-ink-800 rounded-xl shadow-sm dark:shadow-none dark:border dark:border-ink-700 hover:shadow-md transition-all disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          <ChevronLeft size={20} className="text-ink-600" />
+          <ChevronLeft size={20} className="text-ink-600 dark:text-ink-400" />
         </button>
         
-        <div className="flex items-center gap-2 px-6 py-2 bg-white rounded-xl shadow-sm">
+        <div className="flex items-center gap-2 px-6 py-2 bg-white dark:bg-ink-800 rounded-xl shadow-sm dark:shadow-none dark:border dark:border-ink-700">
           <Calendar size={20} className="text-primary-500" />
-          <span className="text-xl font-bold text-ink-800">{selectedYear}年</span>
+          <span className="text-xl font-bold text-ink-800 dark:text-ink-200">{selectedYear}年</span>
         </div>
         
         <button
           onClick={goToNextYear}
           disabled={currentYearIndex <= 0}
-          className="p-2 bg-white rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          className="p-2 bg-white dark:bg-ink-800 rounded-xl shadow-sm dark:shadow-none dark:border dark:border-ink-700 hover:shadow-md transition-all disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          <ChevronRight size={20} className="text-ink-600" />
+          <ChevronRight size={20} className="text-ink-600 dark:text-ink-400" />
         </button>
       </div>
       
@@ -250,12 +252,12 @@ export default function Statistics() {
       {budgetProgress.budget > 0 ? (
         <div className="card p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-ink-800 flex items-center gap-2">
+            <h3 className="font-semibold text-ink-800 dark:text-ink-200 flex items-center gap-2">
               <Target size={20} className="text-primary-500" />
               预算使用情况
             </h3>
             {budgetProgress.isOverBudget ? (
-              <span className="flex items-center gap-1 text-xs text-red-500 bg-red-50 px-2 py-1 rounded-lg">
+              <span className="flex items-center gap-1 text-xs text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded-lg">
                 <AlertTriangle size={14} />
                 已超支 {formatMoney(budgetProgress.used - budgetProgress.budget, showCents)}
               </span>
@@ -271,11 +273,11 @@ export default function Statistics() {
           
           <div className="grid grid-cols-3 gap-4 mb-4">
             <div>
-              <p className="text-xs text-ink-400 mb-1">年度预算</p>
-              <p className="text-xl font-bold text-ink-800 tabular-nums">{formatMoney(budgetProgress.budget)}</p>
+              <p className="text-xs text-ink-400 dark:text-ink-500 mb-1">年度预算</p>
+              <p className="text-xl font-bold text-ink-800 dark:text-ink-200 tabular-nums">{formatMoney(budgetProgress.budget)}</p>
             </div>
             <div>
-              <p className="text-xs text-ink-400 mb-1">已使用</p>
+              <p className="text-xs text-ink-400 dark:text-ink-500 mb-1">已使用</p>
               <p className={`text-xl font-bold tabular-nums ${
                 budgetProgress.percentage >= 100 ? 'text-red-500' : 
                 budgetProgress.percentage >= 80 ? 'text-gold-500' : 'text-primary-500'
@@ -284,7 +286,7 @@ export default function Statistics() {
               </p>
             </div>
             <div>
-              <p className="text-xs text-ink-400 mb-1">剩余额度</p>
+              <p className="text-xs text-ink-400 dark:text-ink-500 mb-1">剩余额度</p>
               <p className={`text-xl font-bold tabular-nums ${budgetProgress.remaining > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                 {formatMoney(budgetProgress.remaining)}
               </p>
@@ -294,14 +296,14 @@ export default function Statistics() {
           <div className="space-y-3">
             <div>
               <div className="flex items-center justify-between text-sm mb-2">
-                <span className="text-ink-500">年度进度</span>
+                <span className="text-ink-500 dark:text-ink-400">年度进度</span>
                 <span className={`font-medium ${
-                  budgetProgress.percentage >= 100 ? 'text-red-500' : 'text-ink-700'
+                  budgetProgress.percentage >= 100 ? 'text-red-500' : 'text-ink-700 dark:text-ink-300'
                 }`}>
                   {budgetProgress.percentage.toFixed(1)}%
                 </span>
               </div>
-              <div className="h-3 bg-cream-200 rounded-full overflow-hidden">
+              <div className="h-3 bg-cream-200 dark:bg-ink-700 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
                     budgetProgress.percentage >= 100
@@ -317,14 +319,14 @@ export default function Statistics() {
             
             <div>
               <div className="flex items-center justify-between text-sm mb-2">
-                <span className="text-ink-500">本月进度</span>
+                <span className="text-ink-500 dark:text-ink-400">本月进度</span>
                 <span className={`font-medium ${
-                  budgetProgress.currentMonthPercentage >= 100 ? 'text-red-500' : 'text-ink-700'
+                  budgetProgress.currentMonthPercentage >= 100 ? 'text-red-500' : 'text-ink-700 dark:text-ink-300'
                 }`}>
                   {budgetProgress.currentMonthPercentage.toFixed(1)}%
                 </span>
               </div>
-              <div className="h-3 bg-cream-200 rounded-full overflow-hidden">
+              <div className="h-3 bg-cream-200 dark:bg-ink-700 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
                     budgetProgress.currentMonthPercentage >= 100
@@ -336,7 +338,7 @@ export default function Statistics() {
                   style={{ width: `${Math.min(budgetProgress.currentMonthPercentage, 100)}%` }}
                 />
               </div>
-              <div className="flex justify-between text-xs text-ink-400 mt-1">
+              <div className="flex justify-between text-xs text-ink-400 dark:text-ink-500 mt-1">
                 <span>已用 {formatMoney(budgetProgress.currentMonthUsed)}</span>
                 <span>月均预算 {formatMoney(budgetProgress.monthlyBudget)}</span>
               </div>
@@ -349,51 +351,54 @@ export default function Statistics() {
           onClick={() => navigate('/settings')}
         >
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-primary-50 dark:bg-primary-900/20 rounded-xl flex items-center justify-center">
               <Target size={24} className="text-primary-500" />
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-ink-800">设置年度预算</p>
-              <p className="text-sm text-ink-400">设定人情支出上限，追踪使用进度</p>
+              <p className="font-semibold text-ink-800 dark:text-ink-200">设置年度预算</p>
+              <p className="text-sm text-ink-400 dark:text-ink-500">设定人情支出上限，追踪使用进度</p>
             </div>
-            <ChevronRight size={20} className="text-ink-300" />
+            <ChevronRight size={20} className="text-ink-300 dark:text-ink-600" />
           </div>
         </div>
       )}
       
       <div className="card p-5">
-        <h3 className="font-semibold text-ink-800 mb-4 flex items-center gap-2">
+        <h3 className="font-semibold text-ink-800 dark:text-ink-200 mb-4 flex items-center gap-2">
           <span className="text-lg">📊</span>
           月度收支趋势
         </h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={monthlyData} barGap={4}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F5E9D5" />
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#2C2C2C' : '#F5E9D5'} />
               <XAxis 
                 dataKey="month" 
-                tick={{ fill: '#737373', fontSize: 12 }}
-                axisLine={{ stroke: '#E8D5B7' }}
+                tick={{ fill: isDark ? '#A3A3A3' : '#737373', fontSize: 12 }}
+                axisLine={{ stroke: isDark ? '#404040' : '#E8D5B7' }}
                 tickLine={false}
               />
               <YAxis 
-                tick={{ fill: '#737373', fontSize: 12 }}
-                axisLine={{ stroke: '#E8D5B7' }}
+                tick={{ fill: isDark ? '#A3A3A3' : '#737373', fontSize: 12 }}
+                axisLine={{ stroke: isDark ? '#404040' : '#E8D5B7' }}
                 tickLine={false}
                 tickFormatter={(value) => `¥${value}`}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#fff',
-                  border: '1px solid #E8D5B7',
+                  backgroundColor: isDark ? '#1f1f1f' : '#fff',
+                  border: isDark ? '1px solid #404040' : '1px solid #E8D5B7',
                   borderRadius: '12px',
-                  boxShadow: '0 4px 20px -2px rgba(196, 30, 58, 0.1)',
+                  boxShadow: isDark 
+                    ? '0 4px 20px -2px rgba(0, 0, 0, 0.5)' 
+                    : '0 4px 20px -2px rgba(196, 30, 58, 0.1)',
+                  color: isDark ? '#E5E5E5' : '#2C2C2C',
                 }}
                 formatter={(value: number) => [formatMoney(value), '']}
               />
               <Legend 
                 iconType="circle"
-                wrapperStyle={{ paddingTop: '10px' }}
+                wrapperStyle={{ paddingTop: '10px', color: isDark ? '#A3A3A3' : '#737373' }}
               />
               <Bar dataKey="支出" fill={CHART_COLORS.expense} radius={[4, 4, 0, 0]} />
               <Bar dataKey="收入" fill={CHART_COLORS.income} radius={[4, 4, 0, 0]} />
@@ -404,7 +409,7 @@ export default function Statistics() {
       
       <div className="grid md:grid-cols-2 gap-6">
         <div className="card p-5">
-          <h3 className="font-semibold text-ink-800 mb-4 flex items-center gap-2">
+          <h3 className="font-semibold text-ink-800 dark:text-ink-200 mb-4 flex items-center gap-2">
             <span className="text-lg">🥧</span>
             支出分类
           </h3>
@@ -431,10 +436,13 @@ export default function Statistics() {
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#fff',
-                        border: '1px solid #E8D5B7',
+                        backgroundColor: isDark ? '#1f1f1f' : '#fff',
+                        border: isDark ? '1px solid #404040' : '1px solid #E8D5B7',
                         borderRadius: '12px',
-                        boxShadow: '0 4px 20px -2px rgba(196, 30, 58, 0.1)',
+                        boxShadow: isDark 
+                          ? '0 4px 20px -2px rgba(0, 0, 0, 0.5)' 
+                          : '0 4px 20px -2px rgba(196, 30, 58, 0.1)',
+                        color: isDark ? '#E5E5E5' : '#2C2C2C',
                       }}
                       formatter={(value: number) => [formatMoney(value), '金额']}
                     />
@@ -452,13 +460,13 @@ export default function Statistics() {
                         className="w-3 h-3 rounded-full flex-shrink-0"
                         style={{ backgroundColor: TYPE_COLORS[type] || '#9CA3AF' }}
                       />
-                      <span className="text-sm text-ink-600 flex-1">
+                      <span className="text-sm text-ink-600 dark:text-ink-400 flex-1">
                         {item.icon} {item.name}
                       </span>
-                      <span className="text-sm font-medium text-ink-800 tabular-nums">
+                      <span className="text-sm font-medium text-ink-800 dark:text-ink-200 tabular-nums">
                         {formatMoney(item.value)}
                       </span>
-                      <span className="text-xs text-ink-400 w-12 text-right">
+                      <span className="text-xs text-ink-400 dark:text-ink-500 w-12 text-right">
                         {percent}%
                       </span>
                     </div>
@@ -467,7 +475,7 @@ export default function Statistics() {
               </div>
             </>
           ) : (
-            <div className="text-center py-12 text-ink-300">
+            <div className="text-center py-12 text-ink-300 dark:text-ink-600">
               <p className="text-4xl mb-2">📊</p>
               <p>暂无支出数据</p>
             </div>
@@ -475,7 +483,7 @@ export default function Statistics() {
         </div>
         
         <div className="card p-5">
-          <h3 className="font-semibold text-ink-800 mb-4 flex items-center gap-2">
+          <h3 className="font-semibold text-ink-800 dark:text-ink-200 mb-4 flex items-center gap-2">
             <span className="text-lg">🏷️</span>
             标签支出分布
           </h3>
@@ -502,10 +510,13 @@ export default function Statistics() {
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#fff',
-                        border: '1px solid #E8D5B7',
+                        backgroundColor: isDark ? '#1f1f1f' : '#fff',
+                        border: isDark ? '1px solid #404040' : '1px solid #E8D5B7',
                         borderRadius: '12px',
-                        boxShadow: '0 4px 20px -2px rgba(196, 30, 58, 0.1)',
+                        boxShadow: isDark 
+                          ? '0 4px 20px -2px rgba(0, 0, 0, 0.5)' 
+                          : '0 4px 20px -2px rgba(196, 30, 58, 0.1)',
+                        color: isDark ? '#E5E5E5' : '#2C2C2C',
                       }}
                       formatter={(value: number) => [formatMoney(value), '金额']}
                     />
@@ -522,25 +533,25 @@ export default function Statistics() {
                         className="w-3 h-3 rounded-full flex-shrink-0"
                         style={{ backgroundColor: getTagChartColor(item.name, index) }}
                       />
-                      <span className="text-sm text-ink-600 flex-1">
+                      <span className="text-sm text-ink-600 dark:text-ink-400 flex-1">
                         {item.name === '未标记' ? '⚪ 未标记' : <span className="px-1.5 py-0.5 rounded-full text-[10px] mr-1" style={{ backgroundColor: getTagChartColor(item.name, index) + '22', color: getTagChartColor(item.name, index) }}>{item.name}</span>}
                       </span>
-                      <span className="text-sm font-medium text-ink-800 tabular-nums">
+                      <span className="text-sm font-medium text-ink-800 dark:text-ink-200 tabular-nums">
                         {formatMoney(item.value)}
                       </span>
-                      <span className="text-xs text-ink-400 w-12 text-right">
+                      <span className="text-xs text-ink-400 dark:text-ink-500 w-12 text-right">
                         {percent}%
                       </span>
                     </div>
                   );
                 })}
               </div>
-              <p className="text-xs text-ink-400 mt-3">
+              <p className="text-xs text-ink-400 dark:text-ink-500 mt-3">
                 提示：一笔记录含多个标签时，金额会分别计入各标签维度。
               </p>
             </>
           ) : (
-            <div className="text-center py-12 text-ink-300">
+            <div className="text-center py-12 text-ink-300 dark:text-ink-600">
               <p className="text-4xl mb-2">🏷️</p>
               <p>暂无支出数据</p>
             </div>
@@ -548,22 +559,22 @@ export default function Statistics() {
         </div>
         
         <div className="card p-5 md:col-span-2">
-          <h3 className="font-semibold text-ink-800 mb-4 flex items-center gap-2">
+          <h3 className="font-semibold text-ink-800 dark:text-ink-200 mb-4 flex items-center gap-2">
             <span className="text-lg">📈</span>
             年度概览
           </h3>
           
           <div className="space-y-4">
-            <div className="p-4 bg-cream-50 rounded-xl">
+            <div className="p-4 bg-cream-50 dark:bg-ink-900 rounded-xl">
               <div className="flex items-center justify-between">
-                <span className="text-ink-500">记录总数</span>
-                <span className="text-xl font-bold text-ink-800">{stats.recordCount} 笔</span>
+                <span className="text-ink-500 dark:text-ink-400">记录总数</span>
+                <span className="text-xl font-bold text-ink-800 dark:text-ink-200">{stats.recordCount} 笔</span>
               </div>
             </div>
             
-            <div className="p-4 bg-cream-50 rounded-xl">
+            <div className="p-4 bg-cream-50 dark:bg-ink-900 rounded-xl">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-ink-500">平均每笔支出</span>
+                <span className="text-ink-500 dark:text-ink-400">平均每笔支出</span>
                 <span className="font-bold text-primary-500 tabular-nums">
                   {stats.recordCount > 0 
                     ? formatMoney(Math.round(stats.totalExpense / stats.recordCount * 100) / 100, showCents)
@@ -572,7 +583,7 @@ export default function Statistics() {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-ink-500">平均每笔收入</span>
+                <span className="text-ink-500 dark:text-ink-400">平均每笔收入</span>
                 <span className="font-bold text-emerald-500 tabular-nums">
                   {stats.recordCount > 0 
                     ? formatMoney(Math.round(stats.totalIncome / stats.recordCount * 100) / 100)
@@ -582,11 +593,11 @@ export default function Statistics() {
               </div>
             </div>
             
-            <div className="p-4 bg-gradient-to-r from-primary-50 to-transparent rounded-xl">
-              <p className="text-sm text-ink-500 mb-2">年度收支比</p>
+            <div className="p-4 bg-gradient-to-r from-primary-50 to-transparent dark:from-primary-900/20 dark:to-transparent rounded-xl">
+              <p className="text-sm text-ink-500 dark:text-ink-400 mb-2">年度收支比</p>
               <div className="flex items-center gap-3">
                 <div className="flex-1">
-                  <div className="h-3 bg-cream-200 rounded-full overflow-hidden">
+                  <div className="h-3 bg-cream-200 dark:bg-ink-700 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-gradient-to-r from-primary-400 to-primary-500 rounded-full"
                       style={{ 
@@ -597,7 +608,7 @@ export default function Statistics() {
                     />
                   </div>
                 </div>
-                <span className="text-sm font-medium text-ink-600 whitespace-nowrap">
+                <span className="text-sm font-medium text-ink-600 dark:text-ink-400 whitespace-nowrap">
                   支出 / 收入
                 </span>
               </div>
@@ -611,17 +622,17 @@ export default function Statistics() {
   const renderNetworkTab = () => (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-serif font-bold text-ink-800 flex items-center gap-2">
+        <h1 className="text-2xl font-serif font-bold text-ink-800 dark:text-ink-200 flex items-center gap-2">
           <Network className="text-primary-500" size={28} />
           人情关系网络
         </h1>
-        <div className="flex items-center gap-2 bg-white rounded-xl shadow-sm p-1 border border-ink-100">
+        <div className="flex items-center gap-2 bg-white dark:bg-ink-800 rounded-xl shadow-sm dark:shadow-none p-1 border border-ink-100 dark:border-ink-700">
           <button
             onClick={() => setNetworkRange('all')}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
               networkRange === 'all'
                 ? 'bg-primary-500 text-white shadow-sm'
-                : 'text-ink-600 hover:text-primary-600'
+                : 'text-ink-600 dark:text-ink-400 hover:text-primary-600 dark:hover:text-primary-400'
             }`}
           >
             全部记录
@@ -631,7 +642,7 @@ export default function Statistics() {
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
               networkRange === 'yearly'
                 ? 'bg-primary-500 text-white shadow-sm'
-                : 'text-ink-600 hover:text-primary-600'
+                : 'text-ink-600 dark:text-ink-400 hover:text-primary-600 dark:hover:text-primary-400'
             }`}
           >
             {selectedYear}年度
@@ -644,22 +655,22 @@ export default function Statistics() {
           <button
             onClick={goToPrevYear}
             disabled={currentYearIndex >= availableYears.length - 1}
-            className="p-2 bg-white rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-2 bg-white dark:bg-ink-800 rounded-xl shadow-sm dark:shadow-none dark:border dark:border-ink-700 hover:shadow-md transition-all disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            <ChevronLeft size={20} className="text-ink-600" />
+            <ChevronLeft size={20} className="text-ink-600 dark:text-ink-400" />
           </button>
           
-          <div className="flex items-center gap-2 px-6 py-2 bg-white rounded-xl shadow-sm">
+          <div className="flex items-center gap-2 px-6 py-2 bg-white dark:bg-ink-800 rounded-xl shadow-sm dark:shadow-none dark:border dark:border-ink-700">
             <Calendar size={20} className="text-primary-500" />
-            <span className="text-xl font-bold text-ink-800">{selectedYear}年</span>
+            <span className="text-xl font-bold text-ink-800 dark:text-ink-200">{selectedYear}年</span>
           </div>
           
           <button
             onClick={goToNextYear}
             disabled={currentYearIndex <= 0}
-            className="p-2 bg-white rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-2 bg-white dark:bg-ink-800 rounded-xl shadow-sm dark:shadow-none dark:border dark:border-ink-700 hover:shadow-md transition-all disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            <ChevronRight size={20} className="text-ink-600" />
+            <ChevronRight size={20} className="text-ink-600 dark:text-ink-400" />
           </button>
         </div>
       )}
@@ -677,7 +688,7 @@ export default function Statistics() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl shadow-sm border border-ink-100 p-1.5 inline-flex gap-1">
+      <div className="bg-white dark:bg-ink-800 rounded-2xl shadow-sm dark:shadow-none border border-ink-100 dark:border-ink-700 p-1.5 inline-flex gap-1">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -685,7 +696,7 @@ export default function Statistics() {
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
               activeTab === tab.id
                 ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-md'
-                : 'text-ink-600 hover:text-primary-600 hover:bg-cream-50'
+                : 'text-ink-600 dark:text-ink-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-cream-50 dark:hover:bg-ink-700'
             }`}
           >
             <tab.icon size={18} />

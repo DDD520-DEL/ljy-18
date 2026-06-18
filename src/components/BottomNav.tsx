@@ -17,13 +17,13 @@ export default function BottomNav() {
   const recycleBinCount = useGiftStore(state => state.recycleBinCount);
   
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-cream-200 z-50 pb-safe">
-      <div className="flex items-center justify-between px-2 py-1 border-b border-cream-100">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-ink-900/95 backdrop-blur-md border-t border-cream-200 dark:border-ink-800 z-50 pb-safe transition-colors duration-300">
+      <div className="flex items-center justify-between px-2 py-1 border-b border-cream-100 dark:border-ink-800">
         <LedgerSwitcher variant="bottom" />
         <div className="flex items-center gap-1">
           <button
             onClick={() => navigate('/recycle-bin')}
-            className="relative px-3 py-1.5 text-ink-400 hover:text-ink-600 transition-colors flex items-center gap-1"
+            className="relative px-3 py-1.5 text-ink-400 dark:text-ink-500 hover:text-ink-600 dark:hover:text-ink-300 transition-colors flex items-center gap-1"
           >
             <Trash2 size={14} />
             <span className="text-xs font-medium">回收站</span>
@@ -35,7 +35,7 @@ export default function BottomNav() {
           </button>
           <button
             onClick={() => navigate('/settings')}
-            className="px-3 py-1.5 text-ink-400 hover:text-ink-600 transition-colors"
+            className="px-3 py-1.5 text-ink-400 dark:text-ink-500 hover:text-ink-600 dark:hover:text-ink-300 transition-colors"
           >
             <span className="text-xs font-medium">设置</span>
           </button>
@@ -53,7 +53,7 @@ export default function BottomNav() {
                 `flex flex-col items-center justify-center flex-1 py-1 transition-all duration-200 ${
                   isActive
                     ? 'text-primary-500'
-                    : 'text-ink-400'
+                    : 'text-ink-400 dark:text-ink-500'
                 }`
               }
             >
