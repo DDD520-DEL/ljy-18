@@ -98,16 +98,23 @@ export default function Dashboard() {
     saveWidgets(updatedWidgets);
   }, [widgets, saveWidgets]);
 
+  const handleResizeWidget = useCallback((id: string, newSize: 'small' | 'medium' | 'large') => {
+    const updatedWidgets = widgets.map(w => 
+      w.id === id ? { ...w, size: newSize } : w
+    );
+    saveWidgets(updatedWidgets);
+  }, [widgets, saveWidgets]);
+
   const getSizeGridClass = (size: 'small' | 'medium' | 'large') => {
     switch (size) {
       case 'small':
-        return 'md:col-span-1';
+        return 'col-span-1 md:col-span-1 lg:col-span-1 xl:col-span-1';
       case 'medium':
-        return 'md:col-span-1 lg:col-span-1 xl:col-span-1';
+        return 'col-span-1 md:col-span-1 lg:col-span-1 xl:col-span-1';
       case 'large':
-        return 'md:col-span-2 lg:col-span-2 xl:col-span-2';
+        return 'col-span-1 md:col-span-2 lg:col-span-2 xl:col-span-2';
       default:
-        return 'md:col-span-1';
+        return 'col-span-1';
     }
   };
 
@@ -153,6 +160,7 @@ export default function Dashboard() {
                   <DraggableWidgetCard
                     widget={widget}
                     onRemove={handleRemoveWidget}
+                    onResize={handleResizeWidget}
                     isDragging={activeId === widget.id}
                   />
                 </div>

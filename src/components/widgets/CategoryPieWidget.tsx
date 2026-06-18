@@ -47,11 +47,12 @@ export default function CategoryPieWidget({ direction, size = 'small' }: Categor
     return chartData.reduce((sum, item) => sum + item.value, 0);
   }, [chartData]);
 
-  const chartSize = size === 'large' ? 180 : size === 'medium' ? 150 : 120;
-  const outerRadius = chartSize / 2 - 10;
-  const innerRadius = outerRadius * 0.55;
+  const chartSize = size === 'large' ? 200 : size === 'medium' ? 160 : 120;
+  const outerRadius = chartSize / 2 - (size === 'small' ? 5 : 10);
+  const innerRadius = outerRadius * (size === 'small' ? 0.6 : 0.55);
 
-  const displayItems = size === 'small' ? chartData.slice(0, 3) : chartData.slice(0, 5);
+  const legendCount = size === 'large' ? 7 : size === 'medium' ? 5 : 3;
+  const displayItems = chartData.slice(0, legendCount);
 
   if (chartData.length === 0) {
     return (
@@ -98,10 +99,12 @@ export default function CategoryPieWidget({ direction, size = 'small' }: Categor
             </PieChart>
           </ResponsiveContainer>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-xs text-ink-400 dark:text-ink-500">
+            <span className={`${size === 'small' ? 'text-[10px]' : 'text-xs'} text-ink-400 dark:text-ink-500`}>
               {direction === 'expense' ? '总支出' : '总收入'}
             </span>
-            <span className="text-base font-bold text-ink-800 dark:text-ink-200 tabular-nums">
+            <span className={`${
+              size === 'large' ? 'text-lg' : size === 'medium' ? 'text-base' : 'text-sm'
+            } font-bold text-ink-800 dark:text-ink-200 tabular-nums`}>
               {formatMoney(total, showCents)}
             </span>
           </div>

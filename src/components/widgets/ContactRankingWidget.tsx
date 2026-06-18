@@ -10,18 +10,27 @@ interface ContactRankingWidgetProps {
   limit?: number;
 }
 
-export default function ContactRankingWidget({ size = 'medium', limit = 5 }: ContactRankingWidgetProps) {
+export default function ContactRankingWidget({ size = 'medium', limit }: ContactRankingWidgetProps) {
   const navigate = useNavigate();
   const getContactSummaryList = useGiftStore(state => state.getContactSummaryList);
   const showCents = useGiftStore(state => state.preferences.showCents);
 
-  const rankedContacts = useMemo(() => {
+  const displayCount = size === 'large' ? 10 : size === 'medium' ? 6 : 3;
+  const fetchCount = limit || 100;
+
+  const allContacts = useMemo(() => {
     const contacts = getContactSummaryList();
     return contacts
       .filter(c => c.lastRecordDate)
       .sort((a, b) => new Date(b.lastRecordDate).getTime() - new Date(a.lastRecordDate).getTime())
-      .slice(0, limit);
-  }, [getContactSummaryList, limit]);
+      .slice(0, fetchCount);
+  }, [getContactSummaryList, fetchCount]);
+
+  const displayContacts = useMemo(() => {
+    return allContacts.slice(0, displayCount);
+  }, [allContacts, displayCount]);
+
+  const hasMoreContacts = allContacts.length > displayCount;
 
   const formatLastDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -35,9 +44,6 @@ export default function ContactRankingWidget({ size = 'medium', limit = 5 }: Con
     if (diffDays < 30) return `${Math.floor(diffDays / 7)}周前`;
     return `${Math.floor(diffDays / 30)}月前`;
   };
-
-  const displayCount = size === 'large' ? 8 : size === 'medium' ? 5 : 3;
-  const displayContacts = rankedContacts.slice(0, displayCount);
 
   return (
     <div className="h-full flex flex-col">
@@ -61,13 +67,15 @@ export default function ContactRankingWidget({ size = 'medium', limit = 5 }: Con
         )}
       </div>
       
-      {rankedContacts.length > displayCount && (
+      {hasMoreContacts && (
         <button
           onClick={() => navigate('/contacts')}
-          className="mt-3 w-full py-2 text-center text-sm text-primary-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors font-medium flex items-center justify-center gap-1"
+          className={`mt-3 w-full py-2 text-center text-sm text-primary-500 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors font-medium flex items-center justify-center gap-1 ${
+            size === 'small' ? 'py-1 text-xs' : ''
+          }`}
         >
-          查看全部 {rankedContacts.length} 位联系人
-          <ArrowRight size={14} />
+          查看全部 {allContacts.length} 位联系人
+          <ArrowRight size={size === 'small' ? 12 : 14} />
         </button>
       )}
     </div>
