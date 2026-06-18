@@ -20,6 +20,7 @@ import { exportStatisticsToExcel, formatExportDate, type ExportProgress } from '
 import { useNavigate } from 'react-router-dom';
 import RelationNetworkGraph from '@/components/RelationNetworkGraph';
 import ShareCardModal from '@/components/ShareCardModal';
+import CategoryDetailList from '@/components/CategoryDetailList';
 import { useTheme } from '@/hooks/useTheme';
 import type { ShareCardData } from '@/utils/shareCard';
 
@@ -644,6 +645,14 @@ export default function Statistics() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div>
+        <h3 className="font-semibold text-ink-800 dark:text-ink-200 mb-4 flex items-center gap-2">
+          <span className="text-lg">📋</span>
+          分类收支明细
+        </h3>
+        <CategoryDetailList records={yearRecords} />
       </div>
     </>
   );
