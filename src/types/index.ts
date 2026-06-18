@@ -235,6 +235,7 @@ export interface UserPreferences {
   defaultDirection: Direction;
   recentRecordsCount: number;
   showCents: boolean;
+  onboardingCompleted: boolean;
 }
 
 export interface RecordTemplate {
@@ -253,6 +254,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   defaultDirection: 'expense',
   recentRecordsCount: 5,
   showCents: false,
+  onboardingCompleted: false,
 };
 
 export interface ContactGroup {

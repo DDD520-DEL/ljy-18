@@ -44,11 +44,19 @@ export default function BottomNav() {
       <div className="flex items-center justify-around h-14 px-2">
         {navItems.map((item) => {
           const Icon = item.icon;
+          const dataAttr = item.path === '/' 
+            ? 'onboarding-home' 
+            : item.path === '/records' 
+              ? 'onboarding-record' 
+              : item.path === '/contacts' 
+                ? 'onboarding-contacts' 
+                : undefined;
           return (
             <NavLink
               key={item.path}
               to={item.path}
               end={item.path === '/'}
+              data-testid={dataAttr}
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 py-1 transition-all duration-200 ${
                   isActive

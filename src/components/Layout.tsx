@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import BottomNav from './BottomNav';
+import OnboardingGuide from './OnboardingGuide';
 import { useGiftStore } from '@/store/useGiftStore';
 import { useEffect } from 'react';
 
@@ -20,6 +21,7 @@ export default function Layout() {
         </div>
       </main>
       <BottomNav />
+      <OnboardingGuide />
     </div>
   );
 }
